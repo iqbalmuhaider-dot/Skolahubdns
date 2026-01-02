@@ -13,158 +13,193 @@
     <style>
         .sidebar-link.active { background-color: #eff6ff; color: #2563eb; border-right: 3px solid #2563eb; }
         .hidden { display: none !important; }
-        /* Modal Animation */
-        .modal { transition: opacity 0.25s ease; }
-        body.modal-active { overflow-x: hidden; overflow-y: hidden !important; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .fa-spin-fast { animation: spin 0.6s linear infinite; }
+        .video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: 12px; }
+        .video-container iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen overflow-hidden font-sans">
 
+    <!-- LOADING OVERLAY -->
+    <div id="globalLoader" class="hidden fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
+        <div class="animate-spin w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full mb-3"></div>
+        <p class="text-sm font-bold text-slate-600">Memproses...</p>
+    </div>
+
+    <!-- CMS MODAL (ADMIN ONLY) -->
+    <div id="cmsModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden m-4">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg text-slate-800">Edit Pusat Belajar</h3>
+                <button onclick="toggleCMS(false)" class="text-slate-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-8">
+                
+                <!-- 1. VIDEO SETTINGS -->
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-2 border-b pb-1">1. Video Tutorial</label>
+                    <div class="flex gap-2 items-center">
+                        <span class="text-sm font-bold text-slate-600">YouTube Playlist ID:</span>
+                        <input type="text" id="cmsYoutubeId" class="flex-1 border border-slate-300 rounded px-3 py-1.5 text-sm font-mono focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+
+                <!-- 2. MODULES SETTINGS -->
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-2 border-b pb-1">2. Senarai Modul (Info Cards)</label>
+                    <div id="cmsModulesList" class="space-y-3"></div>
+                    <button onclick="addModuleInput()" class="mt-3 text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-2 rounded-lg font-bold w-full border border-dashed border-blue-300">
+                        <i class="fas fa-plus mr-1"></i> Tambah Modul Info
+                    </button>
+                </div>
+
+                <!-- 3. RESOURCES SETTINGS (BARU!) -->
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-2 border-b pb-1">3. Ebook & Link Drive</label>
+                    <div id="cmsResourcesList" class="space-y-3"></div>
+                    <button onclick="addResourceInput()" class="mt-3 text-xs bg-green-50 hover:bg-green-100 text-green-600 px-3 py-2 rounded-lg font-bold w-full border border-dashed border-green-300">
+                        <i class="fas fa-file-pdf mr-1"></i> Tambah Ebook / Link
+                    </button>
+                </div>
+
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 text-right">
+                <button onclick="saveCMS()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-sm transition">
+                    <i class="fas fa-save mr-2"></i> Simpan Perubahan
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- LOGIN SCREEN -->
     <div id="authScreen" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center">
         <div class="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md text-center">
-            <div class="w-20 h-20 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30">
-                <i class="fas fa-shield-alt text-white text-4xl"></i>
-            </div>
-            <h2 class="text-3xl font-bold mb-2 text-slate-800">SkolaHub Secure</h2>
-            <div id="loginBox" class="mt-8">
-                <button onclick="loginWithGoogle()" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center gap-3">
-                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
-                    Masuk dengan Google
-                </button>
-            </div>
-            <div id="accessDeniedMsg" class="hidden mt-6 bg-red-50 text-red-600 p-4 rounded-lg text-sm border border-red-200">
-                <i class="fas fa-ban mr-2"></i> <b>Akses Ditolak!</b><br>Email anda tiada dalam senarai Admin/User.
-            </div>
-            <p id="authStatus" class="mt-6 text-sm text-slate-400">Menunggu tindakan...</p>
+            <h2 class="text-2xl font-bold mb-4">SkolaHub Secure</h2>
+            <button onclick="loginWithGoogle()" class="w-full bg-white border p-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-50 font-bold text-slate-700">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5"> Login Google
+            </button>
+            <div id="accessDeniedMsg" class="hidden mt-4 text-red-500 text-sm">Akses Ditolak. Email anda tiada dalam sistem.</div>
         </div>
     </div>
 
-    <!-- MAIN DASHBOARD -->
+    <!-- DASHBOARD LAYOUT -->
     <div class="flex h-full hidden" id="mainApp">
-        <!-- SIDEBAR -->
-        <div class="w-64 bg-white border-r border-slate-200 flex flex-col z-10 shadow-sm flex-shrink-0">
-            <div class="h-16 flex items-center px-6 border-b border-slate-100 bg-slate-50">
-                <div class="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center text-white font-bold mr-3">S</div>
-                <span class="font-bold text-lg tracking-tight">SkolaHub</span>
-            </div>
+        <div class="w-64 bg-white border-r flex flex-col shadow-sm z-10">
+            <div class="h-16 flex items-center px-6 font-bold text-lg border-b">SkolaHub</div>
             <div class="p-4">
-                <div class="bg-blue-50 rounded-xl p-4 border border-blue-100 flex items-center gap-3">
-                    <img id="userPhoto" src="" class="w-10 h-10 rounded-full border-2 border-white shadow-sm">
+                <div class="flex items-center gap-3 bg-blue-50 p-3 rounded-lg">
+                    <img id="userPhoto" class="w-8 h-8 rounded-full">
                     <div class="overflow-hidden">
-                        <div class="font-bold text-sm truncate" id="userName">User</div>
-                        <span id="userRoleBadge" class="text-[10px] font-bold uppercase bg-gray-200 px-2 py-0.5 rounded-full">...</span>
+                        <div id="userName" class="text-sm font-bold truncate">User</div>
+                        <div id="userRoleBadge" class="text-[10px] uppercase font-bold text-slate-500">Checking</div>
                     </div>
                 </div>
             </div>
-            <nav class="flex-1 px-2 space-y-1 overflow-y-auto mt-2">
-                <button onclick="switchView('dashboard')" id="nav-dashboard" class="sidebar-link active w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded-lg hover:bg-blue-50 transition"><i class="fas fa-chart-pie w-6"></i> Dashboard</button>
-                <button onclick="switchView('builder')" id="nav-builder" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded-lg hover:bg-blue-50 transition"><i class="fas fa-layer-group w-6"></i> Bina Apps</button>
-                <button onclick="switchView('list')" id="nav-list" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded-lg hover:bg-blue-50 transition"><i class="fas fa-globe w-6"></i> Senarai Apps</button>
-                <div id="adminMenu" class="hidden mt-6 pt-6 border-t border-slate-100">
-                    <div class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Admin Zone</div>
-                    <button onclick="switchView('users')" id="nav-users" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-purple-600 rounded-lg hover:bg-purple-50 transition"><i class="fas fa-users-cog w-6"></i> Users</button>
+            <nav class="flex-1 px-2 space-y-1 mt-2">
+                <button onclick="switchView('dashboard')" id="nav-dashboard" class="sidebar-link active w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50"><i class="fas fa-chart-pie w-6"></i> Dashboard</button>
+                <button onclick="switchView('builder')" id="nav-builder" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50"><i class="fas fa-layer-group w-6"></i> Bina Apps</button>
+                <button onclick="switchView('list')" id="nav-list" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50"><i class="fas fa-globe w-6"></i> Senarai Apps</button>
+                <button onclick="switchView('learn')" id="nav-learn" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50 mt-4 border-t pt-4"><i class="fas fa-graduation-cap w-6 text-green-600"></i> Pusat Belajar</button>
+                <div id="adminMenu" class="hidden mt-4 pt-4 border-t">
+                    <button onclick="switchView('users')" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-purple-600 rounded hover:bg-purple-50"><i class="fas fa-users-cog w-6"></i> Users</button>
                 </div>
             </nav>
-            <div class="p-4 border-t border-slate-100">
-                <button onclick="logout()" class="text-red-500 hover:bg-red-50 text-sm font-medium w-full px-2 py-2 rounded-lg transition text-left"><i class="fas fa-sign-out-alt mr-2"></i> Log Keluar</button>
-            </div>
+            <div class="p-4 border-t"><button onclick="logout()" class="text-red-500 text-sm w-full text-left px-2">Log Keluar</button></div>
         </div>
 
-        <!-- CONTENT -->
         <div class="flex-1 bg-slate-50 relative overflow-hidden flex flex-col w-full">
-            <!-- Top Bar -->
-            <div class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm">
-                <h2 class="font-bold text-xl text-slate-800" id="pageTitle">Dashboard</h2>
-                <button onclick="fetchApps()" class="text-slate-400 hover:text-blue-600"><i class="fas fa-sync-alt"></i></button>
+            <div class="h-16 bg-white border-b flex items-center justify-between px-8 shadow-sm">
+                <h2 class="font-bold text-xl" id="pageTitle">Dashboard</h2>
+                <button onclick="reloadData()" id="globalRefreshBtn" class="text-sm font-bold text-slate-500 hover:text-blue-600"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
             </div>
 
             <!-- VIEW: DASHBOARD -->
-            <div id="view-dashboard" class="view-section flex-1 p-8">
-                <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 w-full md:w-1/3">
-                    <div class="text-slate-500 text-sm font-medium mb-1">Total Apps</div>
-                    <div class="text-4xl font-bold text-slate-800" id="statTotalApps">0</div>
+            <div id="view-dashboard" class="view-section flex-1 p-8 overflow-y-auto">
+                <div class="bg-white p-6 rounded-xl shadow-sm w-full md:w-1/3">
+                    <div class="text-sm text-slate-500">Total Apps</div>
+                    <div class="text-4xl font-bold" id="statTotalApps">...</div>
                 </div>
             </div>
 
-            <!-- VIEW: BUILDER (EDIT & CREATE) -->
+            <!-- VIEW: BUILDER -->
             <div id="view-builder" class="view-section hidden flex-1 flex flex-col p-4 h-full">
-                <div class="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex overflow-hidden">
+                <div class="flex-1 bg-white rounded-xl border flex overflow-hidden">
                      <div class="w-1/2 bg-[#1e1e1e] flex flex-col border-r border-slate-700">
-                        <div class="bg-[#252526] text-gray-400 px-4 py-2 text-xs flex justify-between">
-                            <span>HTML Editor</span>
-                            <button onclick="resetBuilder()" class="text-xs hover:text-white"><i class="fas fa-eraser mr-1"></i> Reset / New</button>
-                        </div>
-                        <textarea id="htmlEditor" class="flex-1 bg-transparent text-gray-300 p-4 font-mono text-sm resize-none focus:outline-none" spellcheck="false"></textarea>
+                        <div class="bg-[#252526] text-gray-400 px-4 py-2 text-xs flex justify-between"><span>HTML Editor</span><button onclick="resetBuilder()" class="hover:text-white">Reset</button></div>
+                        <textarea id="htmlEditor" class="flex-1 bg-transparent text-gray-300 p-4 font-mono text-sm resize-none outline-none"></textarea>
                      </div>
-                     <div class="w-1/2 bg-white flex flex-col relative">
-                        <div class="bg-slate-50 border-b p-3 flex gap-2 items-center">
-                            <input id="subInput" type="text" placeholder="subdomain" class="bg-white border border-slate-300 px-3 py-1.5 rounded text-sm w-40 font-bold focus:ring-2 focus:ring-blue-500 outline-none" oninput="validateSub(this)">
-                            <span class="text-xs text-gray-500 font-mono">.skolahub.com</span>
-                            <div class="flex-1"></div>
-                            <button onclick="publishApp()" id="btnPublish" class="bg-blue-600 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-blue-700 transition shadow-sm">
-                                <i class="fas fa-cloud-upload-alt mr-1"></i> Terbitkan
-                            </button>
-                        </div>
-                        <iframe id="previewFrame" class="flex-1 w-full border-none bg-slate-100"></iframe>
-                     </div>
+                     <div class="w-1/2 bg-white flex flex-col"><div class="bg-slate-50 border-b p-3 flex gap-2"><input id="subInput" placeholder="subdomain" class="border px-2 rounded text-sm w-40 font-bold"><button onclick="publishApp()" id="btnPublish" class="bg-blue-600 text-white px-4 py-1 rounded text-xs font-bold">Terbitkan</button></div><iframe id="previewFrame" class="flex-1 border-none"></iframe></div>
                 </div>
             </div>
 
-            <!-- VIEW: APP LIST (WITH ACTIONS) -->
+            <!-- VIEW: APP LIST -->
             <div id="view-list" class="view-section hidden flex-1 overflow-y-auto p-8">
-                <h3 class="font-bold text-lg text-slate-700 mb-4">Senarai Apps</h3>
-                <div id="appListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <!-- Dynamic List -->
-                </div>
+                <h3 class="font-bold text-lg mb-4">Senarai Apps</h3>
+                <div id="appListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-4"><div class="col-span-2 text-center text-slate-400 py-10">Loading...</div></div>
             </div>
 
-            <!-- VIEW: USERS (ADMIN) -->
+            <!-- VIEW: USERS -->
             <div id="view-users" class="view-section hidden flex-1 overflow-y-auto p-8">
                 <h3 class="font-bold text-purple-800 mb-4">Pengurusan User</h3>
-                <div class="flex gap-2 mb-4">
-                    <input type="email" id="newEmail" placeholder="user@gmail.com" class="border px-3 py-2 rounded flex-1">
-                    <select id="newRole" class="border px-3 py-2 rounded bg-white"><option value="user">User</option><option value="admin">Admin</option></select>
-                    <button onclick="modifyUser('add')" class="bg-purple-600 text-white px-4 py-2 rounded font-bold">Tambah</button>
+                <div class="flex gap-2 mb-4"><input id="newEmail" placeholder="Email" class="border px-3 rounded flex-1"><select id="newRole" class="border px-3 bg-white rounded"><option value="user">User</option><option value="admin">Admin</option></select><button onclick="modifyUser('add')" class="bg-purple-600 text-white px-4 rounded font-bold">Tambah</button></div>
+                <div id="userListBody" class="bg-white rounded border p-4"></div>
+            </div>
+
+            <!-- VIEW: LEARNING HUB (EBOOKS & DRIVE) -->
+            <div id="view-learn" class="view-section hidden flex-1 overflow-y-auto p-8 relative">
+                <button id="btnEditContent" onclick="toggleCMS(true)" class="hidden absolute top-8 right-8 bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg hover:bg-black transition z-10">
+                    <i class="fas fa-edit mr-2"></i> Edit Konten
+                </button>
+
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="p-3 bg-green-100 text-green-700 rounded-lg"><i class="fas fa-graduation-cap text-xl"></i></div>
+                    <div><h2 class="text-2xl font-bold">Pusat Belajar & Rujukan</h2><p class="text-sm text-slate-500">Tutorial, Ebook & Fail Sumber</p></div>
                 </div>
-                <div id="userListBody" class="bg-white rounded border border-slate-200"></div>
+
+                <!-- Video Section -->
+                <div class="mb-10">
+                    <h3 class="font-bold text-lg mb-3 text-slate-700 flex items-center gap-2"><i class="fab fa-youtube text-red-600"></i> Video Tutorial</h3>
+                    <div class="video-container bg-slate-900 shadow-md">
+                        <iframe id="youtubeFrame" src="" frameborder="0" allowfullscreen></iframe>
+                    </div>
+                </div>
+
+                <!-- Resources Section (Ebooks/Drive) -->
+                <div class="mb-10">
+                    <h3 class="font-bold text-lg mb-3 text-slate-700 flex items-center gap-2"><i class="fas fa-folder-open text-yellow-600"></i> Pustaka Sumber (Ebook/Drive)</h3>
+                    <div id="resourcesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Dynamic Resources -->
+                    </div>
+                </div>
+
+                <!-- Modules Section -->
+                <h3 class="font-bold text-lg mb-3 text-slate-700 flex items-center gap-2"><i class="fas fa-info-circle text-blue-600"></i> Info Modul</h3>
+                <div id="modulesGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                    <!-- Dynamic Modules -->
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- SCRIPT -->
     <script>
-        // --- CONFIG ---
         const WORKER_URL = "https://skolahub-engine.iqbalmuhaider.workers.dev";
-        const firebaseConfig = {
-          apiKey: "AIzaSyAL6_gfsCN7v8kmDqneYpBfqiJgYuzuK-Y",
-          authDomain: "skolahubdns.firebaseapp.com",
-          projectId: "skolahubdns",
-          storageBucket: "skolahubdns.firebasestorage.app",
-          messagingSenderId: "406198616120",
-          appId: "1:406198616120:web:07b5d98a88065c06a8e6cd",
-          measurementId: "G-XMB0V19EF5"
-        };
+        const firebaseConfig = { apiKey: "AIzaSyAL6_gfsCN7v8kmDqneYpBfqiJgYuzuK-Y", authDomain: "skolahubdns.firebaseapp.com", projectId: "skolahubdns", storageBucket: "skolahubdns.firebasestorage.app", messagingSenderId: "406198616120", appId: "1:406198616120:web:07b5d98a88065c06a8e6cd", measurementId: "G-XMB0V19EF5" };
 
-        // --- AUTH ---
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const provider = new firebase.auth.GoogleAuthProvider();
-        let currentUser = null; 
-        let currentRole = null;
+        let currentUser = null, currentRole = null;
 
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                document.getElementById('authStatus').innerText = "Checking role...";
                 try {
                     const res = await fetch(`${WORKER_URL}/api/auth/check`, { method: 'POST', body: JSON.stringify({ email: user.email }) });
                     const data = await res.json();
-                    if (data.allowed) {
-                        currentUser = user; currentRole = data.role;
-                        initDashboard(user, data.role);
-                    } else { auth.signOut(); document.getElementById('accessDeniedMsg').classList.remove('hidden'); }
+                    if (data.allowed) { currentUser = user; currentRole = data.role; initDashboard(user, data.role); } 
+                    else { auth.signOut(); document.getElementById('accessDeniedMsg').classList.remove('hidden'); }
                 } catch (e) { alert("Server Error"); }
-            } else { showLoginScreen(); }
+            } else document.getElementById('authScreen').classList.remove('hidden');
         });
 
         function loginWithGoogle() { auth.signInWithPopup(provider); }
@@ -177,168 +212,258 @@
             document.getElementById('userName').innerText = user.displayName;
             document.getElementById('userPhoto').src = user.photoURL;
             document.getElementById('userRoleBadge').innerText = role.toUpperCase();
-            if(role === 'admin') document.getElementById('adminMenu').classList.remove('hidden');
-            fetchApps();
+            if(role === 'admin') {
+                document.getElementById('adminMenu').classList.remove('hidden');
+                document.getElementById('btnEditContent').classList.remove('hidden');
+            }
+            reloadData();
         }
 
-        function showLoginScreen() {
-            document.getElementById('authScreen').classList.remove('hidden');
-            document.getElementById('mainApp').classList.add('hidden');
-            document.getElementById('mainApp').classList.remove('flex');
+        // --- CMS LOGIC (EBOOKS & RESOURCES) ---
+        let learningData = null;
+
+        async function loadLearning() {
+            try {
+                const res = await fetch(`${WORKER_URL}/api/learning`);
+                learningData = await res.json();
+                renderLearning();
+            } catch(e) { console.error(e); }
         }
 
-        // --- APP MANAGEMENT ---
+        function renderLearning() {
+            if(!learningData) return;
+            
+            // 1. Video
+            document.getElementById('youtubeFrame').src = `https://www.youtube.com/embed/videoseries?list=${learningData.playlistId}`;
+            
+            // 2. Resources (Ebook/Drive)
+            const resGrid = document.getElementById('resourcesGrid');
+            const resources = learningData.resources || []; // Handle undefined
+            if(resources.length === 0) {
+                resGrid.innerHTML = `<div class="col-span-3 text-slate-400 text-sm italic">Tiada bahan rujukan ditambah lagi.</div>`;
+            } else {
+                resGrid.innerHTML = resources.map(r => `
+                    <a href="${r.url}" target="_blank" class="flex items-center gap-4 bg-white p-4 rounded-xl border border-slate-200 hover:border-blue-400 hover:shadow-md transition group">
+                        <div class="w-10 h-10 bg-slate-100 text-slate-600 rounded-lg flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition">
+                            <i class="fas ${r.icon || 'fa-file-alt'} text-lg"></i>
+                        </div>
+                        <div class="flex-1 overflow-hidden">
+                            <h4 class="font-bold text-slate-700 truncate group-hover:text-blue-700">${r.title}</h4>
+                            <div class="text-xs text-slate-400 flex items-center gap-1">
+                                <span class="uppercase font-bold bg-slate-100 px-1 rounded text-[10px]">${r.type || 'LINK'}</span> 
+                                Click to open
+                            </div>
+                        </div>
+                        <i class="fas fa-external-link-alt text-slate-300 group-hover:text-blue-500"></i>
+                    </a>
+                `).join('');
+            }
+
+            // 3. Modules (Info Cards)
+            const modGrid = document.getElementById('modulesGrid');
+            modGrid.innerHTML = learningData.modules.map(m => `
+                <div class="bg-white rounded-xl shadow-sm border p-6">
+                    <div class="w-10 h-10 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-4"><i class="fas ${m.icon} text-xl"></i></div>
+                    <h4 class="font-bold text-lg mb-2">${m.title}</h4>
+                    <p class="text-sm text-slate-500">${m.desc}</p>
+                </div>
+            `).join('');
+        }
+
+        function toggleCMS(show) {
+            const modal = document.getElementById('cmsModal');
+            if(show) {
+                document.getElementById('cmsYoutubeId').value = learningData.playlistId || '';
+                
+                // Load Modules Inputs
+                const modList = document.getElementById('cmsModulesList');
+                modList.innerHTML = '';
+                (learningData.modules || []).forEach(m => addModuleInput(m));
+
+                // Load Resources Inputs
+                const resList = document.getElementById('cmsResourcesList');
+                resList.innerHTML = '';
+                (learningData.resources || []).forEach(r => addResourceInput(r));
+
+                modal.classList.remove('hidden');
+            } else { modal.classList.add('hidden'); }
+        }
+
+        function addModuleInput(data = {title:'', desc:'', icon:'fa-info-circle'}) {
+            const div = document.createElement('div');
+            div.className = "bg-slate-50 p-3 rounded border flex gap-2 items-start";
+            div.innerHTML = `
+                <div class="flex-1 space-y-2">
+                    <input class="mod-title w-full border rounded px-2 py-1 text-sm font-bold" placeholder="Tajuk Modul" value="${data.title}">
+                    <input class="mod-desc w-full border rounded px-2 py-1 text-sm" placeholder="Deskripsi" value="${data.desc}">
+                    <input class="mod-icon w-full border rounded px-2 py-1 text-xs font-mono text-slate-500" placeholder="Icon (cth: fa-robot)" value="${data.icon}">
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 p-1"><i class="fas fa-trash"></i></button>
+            `;
+            document.getElementById('cmsModulesList').appendChild(div);
+        }
+
+        function addResourceInput(data = {title:'', url:'', type:'PDF', icon:'fa-file-pdf'}) {
+            const div = document.createElement('div');
+            div.className = "bg-green-50 p-3 rounded border border-green-200 flex gap-2 items-start";
+            div.innerHTML = `
+                <div class="flex-1 space-y-2">
+                    <div class="flex gap-2">
+                        <input class="res-title flex-1 border rounded px-2 py-1 text-sm font-bold" placeholder="Tajuk File/Ebook" value="${data.title}">
+                        <select class="res-type border rounded px-2 py-1 text-xs font-bold bg-white w-24">
+                            <option value="PDF" ${data.type==='PDF'?'selected':''}>PDF</option>
+                            <option value="DRIVE" ${data.type==='DRIVE'?'selected':''}>DRIVE</option>
+                            <option value="LINK" ${data.type==='LINK'?'selected':''}>WEB</option>
+                        </select>
+                    </div>
+                    <input class="res-url w-full border rounded px-2 py-1 text-xs text-blue-600 font-mono" placeholder="https://drive.google.com/..." value="${data.url}">
+                    <input class="res-icon w-full border rounded px-2 py-1 text-xs text-slate-500" placeholder="Icon Class (fa-google-drive)" value="${data.icon}">
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 p-1"><i class="fas fa-trash"></i></button>
+            `;
+            document.getElementById('cmsResourcesList').appendChild(div);
+        }
+
+        async function saveCMS() {
+            const newPlaylist = document.getElementById('cmsYoutubeId').value;
+            
+            // Gather Modules
+            const modDivs = document.querySelectorAll('#cmsModulesList > div');
+            const newModules = Array.from(modDivs).map(div => ({
+                title: div.querySelector('.mod-title').value,
+                desc: div.querySelector('.mod-desc').value,
+                icon: div.querySelector('.mod-icon').value
+            }));
+
+            // Gather Resources
+            const resDivs = document.querySelectorAll('#cmsResourcesList > div');
+            const newResources = Array.from(resDivs).map(div => ({
+                title: div.querySelector('.res-title').value,
+                url: div.querySelector('.res-url').value,
+                type: div.querySelector('.res-type').value,
+                icon: div.querySelector('.res-icon').value
+            }));
+
+            const payload = { playlistId: newPlaylist, modules: newModules, resources: newResources };
+            
+            showLoading("Menyimpan...", "Mengemaskini konten.");
+            try {
+                const res = await fetch(`${WORKER_URL}/api/learning`, {
+                    method: 'POST',
+                    body: JSON.stringify({ adminEmail: currentUser.email, data: payload })
+                });
+                if(res.ok) {
+                    learningData = payload;
+                    renderLearning();
+                    toggleCMS(false);
+                    alert("Konten berjaya dikemaskini!");
+                } else alert("Gagal simpan.");
+            } catch(e) { alert("Error"); }
+            finally { hideLoading(); }
+        }
+
+        // --- COMMON UTILS ---
+        function showLoading(t, d) { document.getElementById('globalLoader').classList.remove('hidden'); }
+        function hideLoading() { document.getElementById('globalLoader').classList.add('hidden'); }
+        async function reloadData() {
+            const btn = document.getElementById('globalRefreshBtn');
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin-fast text-blue-600"></i>`;
+            try { await fetchApps(); loadLearning(); if(currentRole === 'admin') await fetchUsers(); } 
+            finally { btn.innerHTML = `<i class="fas fa-sync-alt"></i> Refresh`; }
+        }
         async function fetchApps() {
             const res = await fetch(`${WORKER_URL}/api/list?email=${currentUser.email}`);
             const apps = await res.json();
             document.getElementById('statTotalApps').innerText = apps.length;
-            renderAppList(apps);
-        }
-
-        function renderAppList(apps) {
             const container = document.getElementById('appListContainer');
-            if(apps.length === 0) return container.innerHTML = `<div class="p-8 text-center text-slate-400 border-2 border-dashed col-span-2">Tiada apps.</div>`;
-            
+            if(apps.length === 0) return container.innerHTML = `<div class="p-8 text-center text-slate-400 col-span-2 border-2 border-dashed">Tiada apps.</div>`;
             container.innerHTML = apps.map(app => `
-                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex justify-between items-center group">
+                <div class="bg-white p-5 rounded-xl border shadow-sm flex justify-between items-center group">
                     <div>
                         <div class="font-bold text-lg text-blue-900">${app.subdomain}</div>
                         <a href="${app.url}" target="_blank" class="text-xs text-blue-500 hover:underline">${app.url}</a>
                         ${currentRole === 'admin' ? `<div class="text-[10px] text-slate-400 mt-1">Owner: ${app.owner}</div>` : ''}
                     </div>
                     <div class="flex gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition">
-                        <button onclick="editApp('${app.subdomain}')" class="bg-yellow-100 text-yellow-700 hover:bg-yellow-200 px-3 py-2 rounded text-xs font-bold" title="Edit HTML">
-                            <i class="fas fa-pen"></i> Edit
-                        </button>
-                        <button onclick="deleteApp('${app.subdomain}')" class="bg-red-100 text-red-600 hover:bg-red-200 px-3 py-2 rounded text-xs font-bold" title="Padam Site">
-                            <i class="fas fa-trash"></i>
-                        </button>
+                        <button onclick="editApp('${app.subdomain}')" class="bg-yellow-100 text-yellow-700 px-3 py-2 rounded text-xs font-bold"><i class="fas fa-pen"></i></button>
+                        <button onclick="deleteApp('${app.subdomain}')" class="bg-red-100 text-red-600 px-3 py-2 rounded text-xs font-bold"><i class="fas fa-trash"></i></button>
                         <a href="${app.url}" target="_blank" class="bg-slate-100 text-slate-600 px-3 py-2 rounded text-xs hover:bg-slate-200"><i class="fas fa-external-link-alt"></i></a>
                     </div>
                 </div>
             `).join('');
         }
-
-        // --- EDIT & DELETE LOGIC (BARU) ---
         async function deleteApp(subdomain) {
-            if(!confirm(`AMARAN: Anda pasti mahu memadam laman web '${subdomain}'?\nTindakan ini tidak boleh dikembalikan.`)) return;
-            
+            if(!confirm(`Padam '${subdomain}'?`)) return;
+            showLoading("Memadam...", "Sila tunggu.");
             try {
-                const res = await fetch(`${WORKER_URL}/api/delete`, {
-                    method: 'DELETE',
-                    body: JSON.stringify({ subdomain: subdomain, requestorEmail: currentUser.email })
-                });
+                const res = await fetch(`${WORKER_URL}/api/delete`, { method: 'DELETE', body: JSON.stringify({ subdomain: subdomain, requestorEmail: currentUser.email }) });
                 const data = await res.json();
-                if(data.success) { alert("Berjaya dipadam."); fetchApps(); }
-                else alert("Gagal: " + data.error);
-            } catch(e) { alert("Ralat Server"); }
+                if(data.success) await fetchApps(); else alert("Gagal: " + data.error);
+            } finally { hideLoading(); }
         }
-
         async function editApp(subdomain) {
-            // 1. Ambil kod HTML asal
-            const res = await fetch(`${WORKER_URL}/api/get?sub=${subdomain}`);
-            const data = await res.json();
-            
-            // 2. Masukkan dalam editor
-            const editor = document.getElementById('htmlEditor');
-            editor.value = data.html;
-            editor.dispatchEvent(new Event('input')); // Trigger preview
-            
-            // 3. Set Subdomain input & Lock
-            const subInput = document.getElementById('subInput');
-            subInput.value = subdomain;
-            subInput.disabled = true; // Tak boleh tukar nama masa edit
-            subInput.classList.add('bg-slate-100', 'text-slate-500');
-
-            // 4. Ubah butang jadi "Update"
-            const btn = document.getElementById('btnPublish');
-            btn.innerHTML = `<i class="fas fa-save mr-1"></i> Update Site`;
-            btn.classList.replace('bg-blue-600', 'bg-green-600');
-            btn.classList.replace('hover:bg-blue-700', 'hover:bg-green-700');
-
-            // 5. Pindah view
-            switchView('builder');
-        }
-
-        function resetBuilder() {
-            document.getElementById('htmlEditor').value = "<h1>New Site</h1>";
-            document.getElementById('htmlEditor').dispatchEvent(new Event('input'));
-            
-            const subInput = document.getElementById('subInput');
-            subInput.value = "";
-            subInput.disabled = false;
-            subInput.classList.remove('bg-slate-100', 'text-slate-500');
-
-            const btn = document.getElementById('btnPublish');
-            btn.innerHTML = `<i class="fas fa-cloud-upload-alt mr-1"></i> Terbitkan`;
-            btn.classList.replace('bg-green-600', 'bg-blue-600');
-            btn.classList.replace('hover:bg-green-700', 'hover:bg-blue-700');
-        }
-
-        // --- PUBLISH LOGIC ---
-        async function publishApp() {
-            const sub = document.getElementById('subInput').value;
-            const html = document.getElementById('htmlEditor').value;
-            const btn = document.getElementById('btnPublish');
-            if(!sub) return alert("Sila isi subdomain");
-            
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i> Saving...`;
+            showLoading("Loading...", "Mengambil data.");
             try {
-                const res = await fetch(`${WORKER_URL}/api/save`, {
-                    method: 'POST',
-                    body: JSON.stringify({ subdomain: sub, html: html, ownerEmail: currentUser.email })
-                });
+                const res = await fetch(`${WORKER_URL}/api/get?sub=${subdomain}`);
                 const data = await res.json();
-                if(data.success) {
-                    alert("Berjaya disimpan!");
-                    resetBuilder(); // Clear form lepas save
-                    fetchApps();
-                    switchView('list');
-                } else alert("Error: " + data.error);
-            } catch(e) { alert("Network Error"); } 
-            finally { btn.innerHTML = `<i class="fas fa-cloud-upload-alt mr-1"></i> Terbitkan`; }
+                const ed = document.getElementById('htmlEditor'); ed.value = data.html; ed.dispatchEvent(new Event('input'));
+                const sub = document.getElementById('subInput'); sub.value = subdomain; sub.disabled = true; sub.classList.add('bg-slate-100');
+                const btn = document.getElementById('btnPublish'); btn.innerText = "Update Site"; btn.className = "bg-green-600 text-white px-4 py-1 rounded text-xs font-bold";
+                switchView('builder');
+            } finally { hideLoading(); }
         }
-
-        // --- UTILS ---
+        function resetBuilder() {
+            const ed = document.getElementById('htmlEditor'); ed.value = "<h1>New Site</h1>"; ed.dispatchEvent(new Event('input'));
+            const sub = document.getElementById('subInput'); sub.value = ""; sub.disabled = false; sub.classList.remove('bg-slate-100');
+            const btn = document.getElementById('btnPublish'); btn.innerText = "Terbitkan"; btn.className = "bg-blue-600 text-white px-4 py-1 rounded text-xs font-bold";
+        }
         function switchView(viewId) {
             document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
             document.getElementById('view-'+viewId).classList.remove('hidden');
             document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
             document.getElementById('nav-'+viewId).classList.add('active');
-            if(viewId==='users') fetchUsers();
+            const titles = { dashboard: 'Dashboard', builder: 'Bina Apps', list: 'Senarai Apps', users: 'Users', learn: 'Pusat Pembelajaran' };
+            document.getElementById('pageTitle').innerText = titles[viewId];
+            if(viewId === 'list' || viewId === 'users' || viewId === 'learn') reloadData();
         }
         function validateSub(el) { el.value = el.value.toLowerCase().replace(/[^a-z0-9-]/g, ''); }
         
-        // Admin User Management
         async function fetchUsers() {
             const res = await fetch(`${WORKER_URL}/api/users?email=${currentUser.email}`);
             const users = await res.json();
             let html = '';
             for(const [email, role] of Object.entries(users)) {
-                html += `<div class="p-3 border-b flex justify-between items-center">
-                    <div>${email} <span class="text-xs bg-slate-200 px-1 rounded">${role}</span></div>
-                    <button onclick="modifyUser('delete', '${email}')" class="text-red-500 text-xs">Delete</button>
-                </div>`;
+                html += `<div class="p-3 border-b flex justify-between items-center text-sm"><div>${email} <span class="bg-slate-200 px-1 rounded text-xs uppercase">${role}</span></div>${email !== currentUser.email ? `<button onclick="modifyUser('delete', '${email}')" class="text-red-500 text-xs">Delete</button>` : ''}</div>`;
             }
             document.getElementById('userListBody').innerHTML = html;
         }
         async function modifyUser(action, targetEmail) {
-            const email = targetEmail || document.getElementById('newEmail').value;
-            const role = document.getElementById('newRole').value;
-            await fetch(`${WORKER_URL}/api/users`, { method: 'POST', body: JSON.stringify({ adminEmail: currentUser.email, action, targetEmail: email, targetRole: role }) });
-            fetchUsers();
+            showLoading("Updating...", "Sila tunggu.");
+            try {
+                const email = targetEmail || document.getElementById('newEmail').value;
+                const role = document.getElementById('newRole').value;
+                await fetch(`${WORKER_URL}/api/users`, { method: 'POST', body: JSON.stringify({ adminEmail: currentUser.email, action, targetEmail: email, targetRole: role }) });
+                await fetchUsers();
+            } finally { hideLoading(); }
+        }
+        async function publishApp() {
+            const sub = document.getElementById('subInput').value;
+            const html = document.getElementById('htmlEditor').value;
+            if(!sub) return alert("Sila isi subdomain");
+            showLoading("Menerbitkan Site...", "Data sedang dihantar ke server.");
+            try {
+                const res = await fetch(`${WORKER_URL}/api/save`, { method: 'POST', body: JSON.stringify({ subdomain: sub, html: html, ownerEmail: currentUser.email }) });
+                const data = await res.json();
+                if(data.success) { await fetchApps(); resetBuilder(); switchView('list'); } 
+                else alert("Error: " + data.error);
+            } catch(e) { alert("Network Error"); } 
+            finally { hideLoading(); }
         }
 
-        // Editor Init
-        const ed = document.getElementById('htmlEditor');
-        ed.value = "<h1>Hello!</h1>";
-        ed.addEventListener('input', () => {
-             const blob = new Blob([ed.value], {type:'text/html'});
-             document.getElementById('previewFrame').src = URL.createObjectURL(blob);
-        });
-        ed.dispatchEvent(new Event('input'));
+        const edInit = document.getElementById('htmlEditor');
+        edInit.value = "<h1>Hello!</h1>";
+        edInit.addEventListener('input', () => { const blob = new Blob([edInit.value], {type:'text/html'}); document.getElementById('previewFrame').src = URL.createObjectURL(blob); });
+        edInit.dispatchEvent(new Event('input'));
     </script>
 </body>
 </html>
-
-
