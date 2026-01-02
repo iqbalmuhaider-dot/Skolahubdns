@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkolaHub Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- FIREBASE SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <style>
+        .sidebar-link.active { background-color: #eff6ff; color: #2563eb; border-right: 3px solid #2563eb; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen overflow-hidden font-sans">
+
+    <!-- 1. LOGIN SCREEN -->
+    <div id="authScreen" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center">
+        <div class="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md text-center">
+            <div class="w-20 h-20 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center mb-6 shadow-lg shadow-blue-500/30">
+                <i class="fas fa-shield-alt text-white text-4xl"></i>
+            </div>
+            <h2 class="text-3xl font-bold mb-2 text-slate-800">SkolaHub Secure</h2>
+            <p class="text-slate-500 mb-8">Portal Pengurusan Sekolah SaaS.</p>
+            
+            <div id="loginBox">
+                <button onclick="loginWithGoogle()" class="w-full bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-bold py-3 px-4 rounded-xl transition flex items-center justify-center gap-3 shadow-sm hover:shadow-md">
+                    <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-6 h-6">
+                    Masuk dengan Google
+                </button>
+            </div>
+
+            <!-- Error Message Box -->
+            <div id="accessDeniedMsg" class="hidden mt-6 bg-red-50 text-red-600 p-4 rounded-lg text-sm border border-red-200">
+                <i class="fas fa-ban mr-2"></i> <b>Akses Ditolak!</b><br>
+                Email anda tidak didaftarkan oleh Admin. Sila hubungi Admin untuk dapatkan akses.
+                <button onclick="location.reload()" class="block w-full mt-2 bg-red-100 hover:bg-red-200 text-red-700 py-1 rounded font-bold">Cuba Semula</button>
+            </div>
+            
+            <p id="authStatus" class="mt-6 text-sm text-slate-400">Menunggu tindakan...</p>
+        </div>
+    </div>
+
+    <!-- 2. MAIN DASHBOARD -->
+    <div class="flex h-full hidden" id="mainApp">
+        
+        <!-- SIDEBAR -->
+        <div class="w-64 bg-white border-r border-slate-200 flex flex-col z-10 shadow-sm flex-shrink-0">
+            <div class="h-16 flex items-center px-6 border-b border-slate-100 bg-slate-50">
+                <div class="w-8 h-8 bg-blue-600 rounded-md flex items-center justify-center text-white font-bold mr-3">S</div>
+                <span class="font-bold text-lg tracking-tight">SkolaHub</span>
+            </div>
+
+            <!-- User Info -->
+            <div class="p-4">
+                <div class="bg-blue-50 rounded-xl p-4 border border-blue-100">
+                    <div class="flex items-center gap-3 mb-1">
+                        <img id="userPhoto" src="" class="w-10 h-10 rounded-full border-2 border-white shadow-sm">
+                        <div class="overflow-hidden">
+                            <div class="font-bold text-sm truncate" id="userName">User</div>
+                            <span id="userRoleBadge" class="text-[10px] font-bold uppercase bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Checking...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Menu -->
+            <nav class="flex-1 px-2 space-y-1 overflow-y-auto mt-2">
+                <button onclick="switchView('dashboard')" id="nav-dashboard" class="sidebar-link active w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded-lg hover:bg-blue-50 transition">
+                    <i class="fas fa-chart-pie w-6"></i> Dashboard
+                </button>
+                <button onclick="switchView('builder')" id="nav-builder" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded-lg hover:bg-blue-50 transition">
+                    <i class="fas fa-layer-group w-6"></i> Bina Apps
+                </button>
+                <button onclick="switchView('list')" id="nav-list" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded-lg hover:bg-blue-50 transition">
+                    <i class="fas fa-globe w-6"></i> Senarai Subdomain
+                </button>
+                
+                <!-- ADMIN ONLY MENU -->
+                <div id="adminMenu" class="hidden mt-6 pt-6 border-t border-slate-100">
+                    <div class="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Admin Zone</div>
+                    <button onclick="switchView('users')" id="nav-users" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-purple-600 rounded-lg hover:bg-purple-50 transition">
+                        <i class="fas fa-users-cog w-6"></i> Pengurusan User
+                    </button>
+                </div>
+            </nav>
+
+            <div class="p-4 border-t border-slate-100">
+                <button onclick="logout()" class="flex items-center justify-center text-red-500 hover:text-white hover:bg-red-500 text-sm font-medium transition w-full px-2 py-2 rounded-lg border border-red-100 hover:border-red-500">
+                    <i class="fas fa-sign-out-alt mr-2"></i> Log Keluar
+                </button>
+            </div>
+        </div>
+
+        <!-- CONTENT AREA -->
+        <div class="flex-1 bg-slate-50 relative overflow-hidden flex flex-col w-full">
+            
+            <!-- VIEW 1: DASHBOARD STATS -->
+            <div id="view-dashboard" class="view-section flex-1 overflow-y-auto p-8">
+                <h2 class="text-2xl font-bold text-slate-800 mb-6">Dashboard Utama</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="text-slate-500 text-sm font-medium mb-1">Jumlah Apps</div>
+                        <div class="text-4xl font-bold text-slate-800" id="statTotalApps">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW 2: APP BUILDER -->
+            <div id="view-builder" class="view-section hidden flex-1 flex flex-col p-4 h-full">
+                <div class="flex-1 bg-white rounded-xl border border-slate-200 shadow-sm flex overflow-hidden">
+                     <div class="w-1/2 bg-[#1e1e1e] flex flex-col border-r border-slate-700">
+                        <div class="bg-[#252526] text-gray-400 px-4 py-2 text-xs flex justify-between">
+                            <span>HTML Editor</span>
+                            <span class="text-green-500 text-xs"><i class="fas fa-code"></i> Live</span>
+                        </div>
+                        <textarea id="htmlEditor" class="flex-1 bg-transparent text-gray-300 p-4 font-mono text-sm resize-none focus:outline-none" spellcheck="false"></textarea>
+                     </div>
+                     <div class="w-1/2 bg-white flex flex-col relative">
+                        <div class="bg-slate-50 border-b p-3 flex gap-2 items-center">
+                            <input id="subInput" type="text" placeholder="subdomain" class="bg-white border border-slate-300 px-3 py-1.5 rounded text-sm w-40 font-bold focus:ring-2 focus:ring-blue-500 outline-none" oninput="validateSub(this)">
+                            <span class="text-xs text-gray-500 font-mono">.skolahub.com</span>
+                            <div class="flex-1"></div>
+                            <button onclick="publishApp()" id="btnPublish" class="bg-blue-600 text-white px-4 py-1.5 rounded text-xs font-bold hover:bg-blue-700 transition shadow-sm">
+                                <i class="fas fa-cloud-upload-alt mr-1"></i> Terbitkan
+                            </button>
+                        </div>
+                        <iframe id="previewFrame" class="flex-1 w-full border-none bg-slate-100"></iframe>
+                     </div>
+                </div>
+            </div>
+
+            <!-- VIEW 3: LIST SUBDOMAIN -->
+            <div id="view-list" class="view-section hidden flex-1 overflow-y-auto p-8">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="font-bold text-2xl text-slate-800">Senarai Apps</h3>
+                    <button onclick="fetchApps()" class="text-blue-600 hover:bg-blue-50 px-3 py-1 rounded transition"><i class="fas fa-sync-alt"></i> Refresh</button>
+                </div>
+                <div id="appListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Dynamic List -->
+                </div>
+            </div>
+
+            <!-- VIEW 4: USER MANAGEMENT (ADMIN ONLY) -->
+            <div id="view-users" class="view-section hidden flex-1 overflow-y-auto p-8">
+                <h3 class="font-bold text-2xl text-purple-800 mb-6">Pengurusan Pengguna (Admin)</h3>
+                
+                <!-- Add User Form -->
+                <div class="bg-white p-6 rounded-xl border border-purple-100 shadow-sm mb-8">
+                    <h4 class="font-bold text-sm text-slate-500 uppercase mb-4">Tambah / Update User Baru</h4>
+                    <div class="flex gap-3">
+                        <input type="email" id="newEmail" placeholder="user@gmail.com" class="flex-1 border border-slate-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-purple-500 outline-none">
+                        <select id="newRole" class="border border-slate-300 rounded-lg px-4 py-2 bg-slate-50">
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                        <button onclick="modifyUser('add')" class="bg-purple-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-purple-700">
+                            <i class="fas fa-plus mr-2"></i> Tambah
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-2">* User mesti ada akaun Google untuk login.</p>
+                </div>
+
+                <!-- User List -->
+                <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-xs">
+                            <tr>
+                                <th class="px-6 py-3">Email Pengguna</th>
+                                <th class="px-6 py-3">Role</th>
+                                <th class="px-6 py-3 text-right">Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="userListBody">
+                            <tr><td colspan="3" class="px-6 py-4 text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- LOGIC SCRIPT -->
+    <script>
+        // --- CONFIGURATION ---
+        const WORKER_URL = "https://skolahub-engine.iqbalmuhaider.workers.dev";
+        
+        const firebaseConfig = {
+          apiKey: "AIzaSyAL6_gfsCN7v8kmDqneYpBfqiJgYuzuK-Y",
+          authDomain: "skolahubdns.firebaseapp.com",
+          projectId: "skolahubdns",
+          storageBucket: "skolahubdns.firebasestorage.app",
+          messagingSenderId: "406198616120",
+          appId: "1:406198616120:web:07b5d98a88065c06a8e6cd",
+          measurementId: "G-XMB0V19EF5"
+        };
+
+        // --- INIT FIREBASE ---
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const provider = new firebase.auth.GoogleAuthProvider();
+
+        let currentUser = null; // Firebase User Object
+        let currentRole = null; // 'admin' | 'user'
+
+        // --- AUTH FLOW ---
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                // 1. Google Login Berjaya, sekarang check Whitelist Admin
+                document.getElementById('authStatus').innerText = "Memeriksa kebenaran Admin...";
+                
+                try {
+                    const res = await fetch(`${WORKER_URL}/api/auth/check`, {
+                        method: 'POST',
+                        body: JSON.stringify({ email: user.email })
+                    });
+                    const data = await res.json();
+
+                    if (data.allowed) {
+                        // SUCCESS: Masuk Dashboard
+                        currentUser = user;
+                        currentRole = data.role;
+                        initDashboard(user, data.role);
+                    } else {
+                        // FAIL: Tendang keluar
+                        auth.signOut();
+                        document.getElementById('loginBox').classList.add('hidden');
+                        document.getElementById('accessDeniedMsg').classList.remove('hidden');
+                    }
+                } catch (e) {
+                    alert("Ralat Server: " + e.message);
+                }
+
+            } else {
+                showLoginScreen();
+            }
+        });
+
+        function loginWithGoogle() {
+            auth.signInWithPopup(provider).catch(e => alert(e.message));
+        }
+
+        function logout() {
+            auth.signOut();
+            location.reload();
+        }
+
+        // --- DASHBOARD UI ---
+        function initDashboard(user, role) {
+            document.getElementById('authScreen').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('flex');
+
+            document.getElementById('userName').innerText = user.displayName;
+            document.getElementById('userPhoto').src = user.photoURL;
+            document.getElementById('userRoleBadge').innerText = role.toUpperCase();
+            
+            // Warna Badge
+            const badge = document.getElementById('userRoleBadge');
+            if(role === 'admin') {
+                badge.className = "text-[10px] font-bold uppercase bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full border border-purple-200";
+                document.getElementById('adminMenu').classList.remove('hidden'); // Tunjuk menu admin
+            } else {
+                badge.className = "text-[10px] font-bold uppercase bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full border border-blue-200";
+            }
+
+            fetchApps();
+        }
+
+        function showLoginScreen() {
+            document.getElementById('authScreen').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('flex');
+            document.getElementById('accessDeniedMsg').classList.add('hidden');
+            document.getElementById('loginBox').classList.remove('hidden');
+            document.getElementById('authStatus').innerText = "Sila login untuk teruskan.";
+        }
+
+        // --- ADMIN: USER MANAGEMENT ---
+        async function fetchUsers() {
+            if(currentRole !== 'admin') return;
+            const res = await fetch(`${WORKER_URL}/api/users?email=${currentUser.email}`);
+            const users = await res.json();
+            renderUserTable(users);
+        }
+
+        function renderUserTable(usersObj) {
+            const tbody = document.getElementById('userListBody');
+            let html = '';
+            for (const [email, role] of Object.entries(usersObj)) {
+                html += `
+                <tr class="border-b border-slate-100 hover:bg-slate-50">
+                    <td class="px-6 py-4 font-medium text-slate-700">${email}</td>
+                    <td class="px-6 py-4"><span class="uppercase text-xs font-bold px-2 py-1 rounded ${role==='admin'?'bg-purple-100 text-purple-700':'bg-slate-200 text-slate-600'}">${role}</span></td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="deleteUser('${email}')" class="text-red-500 hover:text-red-700 text-xs font-bold border border-red-200 px-2 py-1 rounded hover:bg-red-50">BUANG</button>
+                    </td>
+                </tr>`;
+            }
+            tbody.innerHTML = html || '<tr><td colspan="3" class="text-center p-4">Tiada user lain.</td></tr>';
+        }
+
+        async function modifyUser(action, targetEmail = null) {
+            const email = targetEmail || document.getElementById('newEmail').value;
+            const role = document.getElementById('newRole').value;
+
+            if(!email) return alert("Masukkan email!");
+
+            const res = await fetch(`${WORKER_URL}/api/users`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    adminEmail: currentUser.email,
+                    action: action, // 'add' or 'delete'
+                    targetEmail: email,
+                    targetRole: role
+                })
+            });
+
+            if(res.ok) {
+                alert("Berjaya!");
+                document.getElementById('newEmail').value = "";
+                fetchUsers();
+            } else {
+                alert("Gagal. Pastikan anda Admin.");
+            }
+        }
+        
+        // Wrapper untuk delete
+        window.deleteUser = (email) => {
+            if(confirm(`Yakin nak buang akses user ${email}?`)) {
+                modifyUser('delete', email);
+            }
+        };
+
+        // --- APPS / SUBDOMAIN LOGIC ---
+        async function fetchApps() {
+            const res = await fetch(`${WORKER_URL}/api/list?email=${currentUser.email}`);
+            const apps = await res.json();
+            document.getElementById('statTotalApps').innerText = apps.length;
+            
+            const container = document.getElementById('appListContainer');
+            container.innerHTML = apps.map(app => `
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <div class="font-bold text-lg text-blue-900">${app.subdomain}</div>
+                            <div class="text-xs text-slate-500 mb-2">${app.url}</div>
+                            ${currentRole === 'admin' ? `<div class="text-[10px] bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded inline-block">Owner: ${app.owner}</div>` : ''}
+                        </div>
+                        <a href="${app.url}" target="_blank" class="bg-slate-50 hover:bg-blue-600 hover:text-white text-slate-600 w-8 h-8 flex items-center justify-center rounded-lg transition"><i class="fas fa-external-link-alt"></i></a>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function publishApp() {
+            const sub = document.getElementById('subInput').value;
+            const html = document.getElementById('htmlEditor').value;
+            const btn = document.getElementById('btnPublish');
+            
+            if(!sub) return alert("Sila isi subdomain");
+            btn.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+            
+            try {
+                const res = await fetch(`${WORKER_URL}/api/save`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        subdomain: sub, html: html, ownerEmail: currentUser.email
+                    })
+                });
+                const data = await res.json();
+                if(data.success) {
+                    alert("Berjaya Publish!");
+                    switchView('list');
+                    fetchApps();
+                } else alert("Error: " + data.error);
+            } catch(e) { alert("Network Error"); } 
+            finally { btn.innerHTML = `<i class="fas fa-cloud-upload-alt mr-1"></i> Terbitkan`; }
+        }
+
+        // --- NAVIGATION ---
+        function switchView(viewId) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.getElementById('view-'+viewId).classList.remove('hidden');
+            document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+            document.getElementById('nav-'+viewId).classList.add('active');
+            
+            if(viewId === 'users') fetchUsers();
+        }
+        
+        function validateSub(el) { el.value = el.value.toLowerCase().replace(/[^a-z0-9-]/g, ''); }
+
+        // Editor Init
+        const editor = document.getElementById('htmlEditor');
+        editor.value = "<h1>Hello!</h1>";
+        editor.addEventListener('input', () => {
+             const blob = new Blob([editor.value], {type:'text/html'});
+             document.getElementById('previewFrame').src = URL.createObjectURL(blob);
+        });
+        editor.dispatchEvent(new Event('input'));
+
+    </script>
+</body>
+</html>
+
+Cara Setup Admin Pertama (Bootstrapping)
+Sebab sistem ini "Strict" (hanya yang dalam list boleh masuk), awak kena set diri sendiri jadi Admin dulu secara manual dalam kod Worker.
+ * Buka Cloudflare Worker -> Edit Code.
+ * Cari baris ini di bahagian atas:
+   const MASTER_ADMIN = "iqbalmuhaider@gmail.com"; 
+
+
+
+
