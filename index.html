@@ -27,7 +27,59 @@
         <p class="text-sm font-bold text-slate-600">Memproses...</p>
     </div>
 
-    <!-- CMS MODAL (ADMIN) -->
+    <!-- PREVIEW TEMPLATE MODAL (USER VIEW) -->
+    <div id="previewModal" class="hidden fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div class="flex items-center gap-3">
+                    <h3 class="font-bold text-lg text-slate-800" id="previewTitle">Nama Template</h3>
+                    <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">HTML5</span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="copyTemplateCode()" class="bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition">
+                        <i class="fas fa-copy"></i> Copy Code
+                    </button>
+                    <button onclick="closePreview()" class="text-slate-400 hover:text-red-500 px-2"><i class="fas fa-times text-xl"></i></button>
+                </div>
+            </div>
+            <div class="flex-1 bg-slate-100 relative">
+                <iframe id="previewContentFrame" class="w-full h-full border-none"></iframe>
+            </div>
+            <!-- Hidden storage for code -->
+            <textarea id="hiddenTemplateCode" class="hidden"></textarea>
+        </div>
+    </div>
+
+    <!-- CMS TEMPLATE MODAL (ADMIN ADD) -->
+    <div id="cmsTemplateModal" class="hidden fixed inset-0 z-[55] bg-black/50 backdrop-blur-sm flex items-center justify-center">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden m-4 max-h-[90vh]">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg text-slate-800">Tambah Template Baru</h3>
+                <button onclick="toggleTemplateCMS(false)" class="text-slate-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nama Template / App</label>
+                    <input id="newTempTitle" type="text" class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Portal Sekolah Moden">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Deskripsi Pendek</label>
+                    <input id="newTempDesc" type="text" class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Sesuai untuk sekolah menengah...">
+                </div>
+                <div class="flex-1 flex flex-col">
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Kod HTML</label>
+                    <textarea id="newTempCode" class="w-full border border-slate-300 rounded-lg p-4 text-xs font-mono bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none h-64" placeholder="<!DOCTYPE html>..."></textarea>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 text-right">
+                <button onclick="saveNewTemplate()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-sm transition">
+                    <i class="fas fa-save mr-2"></i> Simpan Template
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CMS MODAL (ADMIN LEARNING) -->
     <div id="cmsModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden m-4">
             <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -126,6 +178,7 @@
                 <button onclick="switchView('dashboard')" id="nav-dashboard" class="sidebar-link active w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50"><i class="fas fa-chart-pie w-6"></i> Dashboard</button>
                 <button onclick="switchView('builder')" id="nav-builder" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50"><i class="fas fa-layer-group w-6"></i> Bina Apps</button>
                 <button onclick="switchView('list')" id="nav-list" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50"><i class="fas fa-globe w-6"></i> Senarai Apps</button>
+                <button onclick="switchView('templates')" id="nav-templates" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50"><i class="fas fa-swatchbook w-6"></i> Koleksi Template</button>
                 <button onclick="switchView('learn')" id="nav-learn" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50 mt-4 border-t pt-4"><i class="fas fa-graduation-cap w-6 text-green-600"></i> Pusat Belajar</button>
                 <div id="adminMenu" class="hidden mt-4 pt-4 border-t">
                     <button onclick="switchView('users')" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-purple-600 rounded hover:bg-purple-50"><i class="fas fa-users-cog w-6"></i> Users</button>
@@ -165,13 +218,30 @@
                 <div id="appListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-4"><div class="col-span-2 text-center text-slate-400 py-10">Loading...</div></div>
             </div>
 
+            <!-- VIEW: TEMPLATES (NEW) -->
+            <div id="view-templates" class="view-section hidden flex-1 overflow-y-auto p-8 relative">
+                <!-- Admin Add Button -->
+                <button id="btnAddTemplate" onclick="toggleTemplateCMS(true)" class="hidden absolute top-6 right-8 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg hover:bg-blue-700 transition z-20">
+                    <i class="fas fa-plus mr-2"></i> Tambah Template
+                </button>
+
+                <div class="flex items-center gap-3 mb-8">
+                    <div class="p-3 bg-purple-100 text-purple-700 rounded-lg"><i class="fas fa-swatchbook text-xl"></i></div>
+                    <div><h2 class="text-2xl font-bold">Koleksi Template</h2><p class="text-sm text-slate-500">Pilih reka bentuk siap untuk mula.</p></div>
+                </div>
+
+                <div id="templatesGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Templates Injected Here -->
+                </div>
+            </div>
+
             <!-- VIEW: USERS -->
             <div id="view-users" class="view-section hidden flex-1 overflow-y-auto p-8">
                 <div class="flex gap-2 mb-4"><input id="newEmail" placeholder="Email" class="border px-3 rounded flex-1"><select id="newRole" class="border px-3 bg-white rounded"><option value="user">User</option><option value="admin">Admin</option></select><button onclick="modifyUser('add')" class="bg-purple-600 text-white px-4 rounded font-bold">Tambah</button></div>
                 <div id="userListBody" class="bg-white rounded border p-4"></div>
             </div>
 
-            <!-- VIEW: LEARNING HUB (NEW GRID SYSTEM) -->
+            <!-- VIEW: LEARNING HUB -->
             <div id="view-learn" class="view-section hidden flex-1 flex flex-col h-full relative">
                 <!-- Admin Edit Button -->
                 <button id="btnEditContent" onclick="toggleCMS(true)" class="hidden absolute top-6 right-8 bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg hover:bg-black transition z-20">
@@ -254,12 +324,13 @@
             if(role === 'admin') {
                 document.getElementById('adminMenu').classList.remove('hidden');
                 document.getElementById('btnEditContent').classList.remove('hidden');
+                document.getElementById('btnAddTemplate').classList.remove('hidden'); // Show Add Template
             }
             reloadData();
         }
 
-        // --- NEW LEARNING SYSTEM LOGIC ---
-        let learningData = { topics: [] }; // Structure: { topics: [ {id, title, icon, materials: []} ] }
+        // --- DATA STATE ---
+        let learningData = { topics: [], templates: [] }; // Modified to include templates
         let currentEditingTopicId = null;
 
         async function loadLearning() {
@@ -267,17 +338,129 @@
                 const res = await fetch(`${WORKER_URL}/api/learning`);
                 const data = await res.json();
                 
-                // Migrate old data structure if needed
+                // Migrate data structures
                 if(data.modules && !data.topics) {
-                    learningData = { topics: [] }; // Reset if old format detected
+                    learningData = { topics: [], templates: [] }; 
                 } else {
-                    learningData = data.topics ? data : { topics: [] };
+                    learningData = data.topics ? data : { topics: [], templates: [] };
+                    // Ensure templates array exists
+                    if(!learningData.templates) learningData.templates = [];
                 }
-                renderGrid();
-            } catch(e) { console.error("Error loading learning data", e); }
+                
+                renderGrid(); // Render Learning Grid
+                renderTemplates(); // Render Templates Grid
+            } catch(e) { console.error("Error loading data", e); }
         }
 
-        // 1. Render Grid Utama
+        // --- TEMPLATE SYSTEM LOGIC ---
+        
+        function renderTemplates() {
+            const grid = document.getElementById('templatesGrid');
+            if(learningData.templates.length === 0) {
+                grid.innerHTML = `<div class="col-span-3 text-center text-slate-400 py-10 border-2 border-dashed rounded-xl">Belum ada template. Admin sila tambah.</div>`;
+                return;
+            }
+            grid.innerHTML = learningData.templates.map(t => `
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition flex flex-col group">
+                    <div class="h-32 bg-slate-100 flex items-center justify-center border-b border-slate-50 relative group-hover:bg-slate-200 transition">
+                        <i class="fas fa-columns text-4xl text-slate-300 group-hover:text-slate-400"></i>
+                        <button onclick="openTemplate('${t.id}')" class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition opacity-0 group-hover:opacity-100">
+                            <span class="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-lg">Preview</span>
+                        </button>
+                    </div>
+                    <div class="p-5 flex-1 flex flex-col">
+                        <h4 class="font-bold text-slate-800 mb-1">${t.title}</h4>
+                        <p class="text-xs text-slate-500 mb-4 line-clamp-2">${t.desc || 'Tiada deskripsi'}</p>
+                        <div class="mt-auto flex gap-2">
+                            <button onclick="openTemplate('${t.id}')" class="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white py-2 rounded-lg text-xs font-bold transition">View</button>
+                            ${currentRole === 'admin' ? `<button onclick="deleteTemplate('${t.id}')" class="px-3 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition"><i class="fas fa-trash"></i></button>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function toggleTemplateCMS(show) {
+            const modal = document.getElementById('cmsTemplateModal');
+            if(show) {
+                document.getElementById('newTempTitle').value = "";
+                document.getElementById('newTempDesc').value = "";
+                document.getElementById('newTempCode').value = "<!DOCTYPE html>\n<html>\n<head>\n<title>Template</title>\n</head>\n<body>\n<h1>Hello</h1>\n</body>\n</html>";
+                modal.classList.remove('hidden');
+            } else { modal.classList.add('hidden'); }
+        }
+
+        async function saveNewTemplate() {
+            const title = document.getElementById('newTempTitle').value;
+            const desc = document.getElementById('newTempDesc').value;
+            const code = document.getElementById('newTempCode').value;
+
+            if(!title || !code) return alert("Sila isi Nama dan Kod HTML");
+
+            const newTemp = {
+                id: 'temp_' + Date.now(),
+                title: title,
+                desc: desc,
+                code: code
+            };
+
+            learningData.templates.push(newTemp);
+            
+            // Re-use existing saveCMS function logic (updates learningData object)
+            await saveLearningData();
+            toggleTemplateCMS(false);
+            renderTemplates();
+        }
+
+        async function deleteTemplate(id) {
+            if(!confirm("Padam template ini?")) return;
+            learningData.templates = learningData.templates.filter(t => t.id !== id);
+            await saveLearningData();
+            renderTemplates();
+        }
+
+        // Preview Logic
+        window.openTemplate = (id) => {
+            const temp = learningData.templates.find(t => t.id === id);
+            if(!temp) return;
+
+            document.getElementById('previewTitle').innerText = temp.title;
+            document.getElementById('hiddenTemplateCode').value = temp.code;
+            
+            // Render Iframe
+            const blob = new Blob([temp.code], {type:'text/html'});
+            document.getElementById('previewContentFrame').src = URL.createObjectURL(blob);
+            
+            document.getElementById('previewModal').classList.remove('hidden');
+        };
+
+        window.closePreview = () => {
+            document.getElementById('previewModal').classList.add('hidden');
+            document.getElementById('previewContentFrame').src = "";
+        };
+
+        window.copyTemplateCode = () => {
+            const code = document.getElementById('hiddenTemplateCode').value;
+            navigator.clipboard.writeText(code).then(() => {
+                alert("Kod HTML berjaya disalin! Anda boleh paste di menu 'Bina Apps'.");
+            });
+        };
+
+        // Reuse save logic
+        async function saveLearningData() {
+            showLoading("Menyimpan...", "Mengemaskini data.");
+            try {
+                const res = await fetch(`${WORKER_URL}/api/learning`, {
+                    method: 'POST',
+                    body: JSON.stringify({ adminEmail: currentUser.email, data: learningData })
+                });
+                if(!res.ok) throw new Error("Gagal");
+            } catch(e) { alert("Error saving data"); }
+            finally { hideLoading(); }
+        }
+
+
+        // --- LEARNING SYSTEM LOGIC (EXISTING) ---
         function renderGrid() {
             const grid = document.getElementById('topicGrid');
             if(learningData.topics.length === 0) {
@@ -457,19 +640,9 @@
                 }
             }
 
-            showLoading("Menyimpan...", "Mengemaskini pangkalan data.");
-            try {
-                const res = await fetch(`${WORKER_URL}/api/learning`, {
-                    method: 'POST',
-                    body: JSON.stringify({ adminEmail: currentUser.email, data: learningData })
-                });
-                if(res.ok) {
-                    alert("Berjaya disimpan!");
-                    toggleCMS(false);
-                    renderGrid(); // Refresh main view
-                } else alert("Gagal simpan.");
-            } catch(e) { alert("Error"); }
-            finally { hideLoading(); }
+            await saveLearningData();
+            toggleCMS(false);
+            renderGrid();
         }
 
         // --- UTILS & INIT ---
@@ -534,9 +707,9 @@
             document.getElementById('view-'+viewId).classList.remove('hidden');
             document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
             document.getElementById('nav-'+viewId).classList.add('active');
-            const titles = { dashboard: 'Dashboard', builder: 'Bina Apps', list: 'Senarai Apps', users: 'Users', learn: 'Pusat Pembelajaran' };
+            const titles = { dashboard: 'Dashboard', builder: 'Bina Apps', list: 'Senarai Apps', users: 'Users', learn: 'Pusat Pembelajaran', templates: 'Koleksi Template' };
             document.getElementById('pageTitle').innerText = titles[viewId];
-            if(viewId === 'list' || viewId === 'users' || viewId === 'learn') reloadData();
+            if(viewId === 'list' || viewId === 'users' || viewId === 'learn' || viewId === 'templates') reloadData();
         }
         function validateSub(el) { el.value = el.value.toLowerCase().replace(/[^a-z0-9-]/g, ''); }
         
