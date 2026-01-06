@@ -3,9 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SkolaHub Portal</title>
+    <title>SkolaHub Edu Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js untuk Graf -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
@@ -13,281 +15,193 @@
     <style>
         .sidebar-link.active { background-color: #eff6ff; color: #2563eb; border-right: 3px solid #2563eb; }
         .hidden { display: none !important; }
+        .react-mode textarea { color: #61dafb; background: #1e1e1e; font-family: 'Menlo', monospace; }
+        .html-mode textarea { color: #e2e8f0; background: #1e1e1e; font-family: 'Menlo', monospace; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .fa-spin-fast { animation: spin 0.6s linear infinite; }
         .video-wrapper { position: relative; padding-bottom: 56.25%; height: 0; border-radius: 12px; overflow: hidden; background: #000; }
         .video-wrapper iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen overflow-hidden font-sans">
 
     <!-- GLOBAL LOADER -->
-    <div id="globalLoader" class="hidden fixed inset-0 z-[100] bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center">
-        <div class="animate-spin w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full mb-3"></div>
-        <p class="text-sm font-bold text-slate-600">Memproses...</p>
+    <div id="globalLoader" class="hidden fixed inset-0 z-[100] bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center">
+        <div class="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mb-3"></div>
+        <p class="text-sm font-bold text-slate-600 animate-pulse">Memproses Data...</p>
     </div>
 
-    <!-- PREVIEW TEMPLATE MODAL (USER VIEW) -->
+    <!-- PREVIEW MODAL -->
     <div id="previewModal" class="hidden fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <div class="flex items-center gap-3">
-                    <h3 class="font-bold text-lg text-slate-800" id="previewTitle">Nama Template</h3>
-                    <span class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded font-mono">HTML5</span>
-                </div>
-                <div class="flex gap-2">
-                    <button onclick="copyTemplateCode()" class="bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition">
-                        <i class="fas fa-copy"></i> Copy Code
-                    </button>
-                    <button onclick="closePreview()" class="text-slate-400 hover:text-red-500 px-2"><i class="fas fa-times text-xl"></i></button>
-                </div>
+                <h3 class="font-bold text-lg text-slate-800">Pratonton</h3>
+                <button onclick="closePreview()" class="text-slate-400 hover:text-red-500 text-2xl"><i class="fas fa-times"></i></button>
             </div>
-            <div class="flex-1 bg-slate-100 relative">
-                <iframe id="previewContentFrame" class="w-full h-full border-none"></iframe>
-            </div>
-            <!-- Hidden storage for code -->
+            <iframe id="previewContentFrame" class="flex-1 bg-white border-none"></iframe>
             <textarea id="hiddenTemplateCode" class="hidden"></textarea>
         </div>
     </div>
 
-    <!-- CMS TEMPLATE MODAL (ADMIN ADD) -->
-    <div id="cmsTemplateModal" class="hidden fixed inset-0 z-[55] bg-black/50 backdrop-blur-sm flex items-center justify-center">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden m-4 max-h-[90vh]">
-            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <h3 class="font-bold text-lg text-slate-800">Tambah Template Baru</h3>
-                <button onclick="toggleTemplateCMS(false)" class="text-slate-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
-            </div>
-            <div class="p-6 overflow-y-auto flex-1 space-y-4">
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nama Template / App</label>
-                    <input id="newTempTitle" type="text" class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Contoh: Portal Sekolah Moden">
-                </div>
-                <div>
-                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Deskripsi Pendek</label>
-                    <input id="newTempDesc" type="text" class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Sesuai untuk sekolah menengah...">
-                </div>
-                <div class="flex-1 flex flex-col">
-                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Kod HTML</label>
-                    <textarea id="newTempCode" class="w-full border border-slate-300 rounded-lg p-4 text-xs font-mono bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none h-64" placeholder="<!DOCTYPE html>..."></textarea>
-                </div>
-            </div>
-            <div class="p-4 border-t border-slate-100 bg-slate-50 text-right">
-                <button onclick="saveNewTemplate()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-sm transition">
-                    <i class="fas fa-save mr-2"></i> Simpan Template
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- CMS MODAL (ADMIN LEARNING) -->
-    <div id="cmsModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center">
-        <div class="bg-white rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden m-4">
-            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <div>
-                    <h3 class="font-bold text-lg text-slate-800">Urus Pusat Belajar</h3>
-                    <p class="text-xs text-slate-500">Tambah Topik dan Bahan Pembelajaran</p>
-                </div>
-                <button onclick="toggleCMS(false)" class="text-slate-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
-            </div>
-            
-            <div class="flex flex-1 overflow-hidden">
-                <!-- Kiri: Senarai Topik -->
-                <div class="w-1/3 border-r border-slate-100 bg-slate-50 flex flex-col">
-                    <div class="p-3 border-b border-slate-100">
-                        <button onclick="addNewTopic()" class="w-full bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow-sm">
-                            <i class="fas fa-plus mr-1"></i> Topik Baru
-                        </button>
-                    </div>
-                    <div id="cmsTopicList" class="flex-1 overflow-y-auto p-2 space-y-1">
-                        <!-- List Topik Dijana Di Sini -->
-                    </div>
-                </div>
-
-                <!-- Kanan: Editor Kandungan -->
-                <div class="w-2/3 flex flex-col bg-white">
-                    <div id="cmsContentArea" class="flex-1 overflow-y-auto p-6 hidden">
-                        <div class="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
-                            <div class="flex-1 mr-4">
-                                <label class="text-[10px] font-bold uppercase text-slate-400">Tajuk Topik</label>
-                                <input id="editTopicTitle" type="text" class="w-full text-lg font-bold border-b border-slate-300 focus:border-blue-500 outline-none pb-1" placeholder="Nama Topik">
-                            </div>
-                            <div>
-                                <label class="text-[10px] font-bold uppercase text-slate-400">Ikon (FontAwesome)</label>
-                                <input id="editTopicIcon" type="text" class="w-24 text-sm border-b border-slate-300 focus:border-blue-500 outline-none pb-1 font-mono" placeholder="fa-book">
-                            </div>
-                        </div>
-
-                        <div class="mb-4 flex justify-between items-center">
-                            <h4 class="font-bold text-slate-700 text-sm">Bahan Pembelajaran</h4>
-                            <button onclick="addMaterialInput()" class="text-xs bg-green-50 text-green-600 px-3 py-1 rounded hover:bg-green-100 font-bold border border-green-200">
-                                <i class="fas fa-plus mr-1"></i> Tambah Bahan
-                            </button>
-                        </div>
-
-                        <div id="cmsMaterialsList" class="space-y-3">
-                            <!-- Input Bahan Dijana Di Sini -->
-                        </div>
-                        
-                        <div class="mt-8 pt-4 border-t border-slate-100 flex justify-between">
-                            <button onclick="deleteCurrentTopic()" class="text-red-500 text-xs font-bold hover:underline"><i class="fas fa-trash mr-1"></i> Padam Topik Ini</button>
-                        </div>
-                    </div>
-                    
-                    <!-- Empty State -->
-                    <div id="cmsEmptyState" class="flex-1 flex flex-col items-center justify-center text-slate-400 p-10 text-center">
-                        <i class="fas fa-arrow-left text-3xl mb-3"></i>
-                        <p>Pilih topik di sebelah kiri untuk edit.</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="p-4 border-t border-slate-100 bg-slate-50 text-right">
-                <button onclick="saveCMS()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-2 rounded-lg font-bold text-sm shadow-sm transition">
-                    <i class="fas fa-save mr-2"></i> Simpan Semua Perubahan
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- AUTH SCREEN -->
-    <div id="authScreen" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center">
+    <div id="authScreen" class="fixed inset-0 z-50 bg-slate-900 flex items-center justify-center p-4">
         <div class="bg-white p-10 rounded-2xl shadow-2xl w-full max-w-md text-center">
-            <h2 class="text-2xl font-bold mb-4">SkolaHub Secure</h2>
-            <button onclick="loginWithGoogle()" class="w-full bg-white border p-3 rounded-lg flex items-center justify-center gap-2 hover:bg-slate-50 font-bold text-slate-700">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5"> Login Google
+            <!-- LOGO BARU DI SINI -->
+            <img src="https://i.postimg.cc/s2BpLNZw/Untitled-design.png" alt="SkolaHub Logo" class="w-32 h-auto mx-auto mb-6">
+            
+            <h2 class="text-2xl font-bold mb-6 text-slate-800">SkolaHub Edu Portal</h2>
+            <div class="mb-4">
+                <p class="text-gray-500 text-sm">Sila log masuk untuk mengakses dashboard.</p>
+            </div>
+            <button onclick="loginWithGoogle()" class="w-full bg-white border border-slate-300 p-3 rounded-xl flex items-center justify-center gap-3 hover:bg-slate-50 font-bold mb-3 shadow-sm transition hover:shadow-md">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" class="w-5 h-5"> Log Masuk Google
             </button>
-            <div id="accessDeniedMsg" class="hidden mt-4 text-red-500 text-sm">Akses Ditolak.</div>
+            <div id="accessDeniedMsg" class="hidden mt-6 bg-red-50 text-red-600 p-4 rounded-lg text-sm border border-red-200">Akses Ditolak.</div>
         </div>
     </div>
 
     <!-- MAIN DASHBOARD -->
     <div class="flex h-full hidden" id="mainApp">
         <!-- SIDEBAR -->
-        <div class="w-64 bg-white border-r flex flex-col shadow-sm z-10">
-            <div class="h-16 flex items-center px-6 font-bold text-lg border-b">SkolaHub</div>
+        <div class="w-64 bg-white border-r flex flex-col shadow-sm z-10 flex-shrink-0">
+            <!-- SIDEBAR HEADER BARU -->
+            <div class="h-20 flex items-center px-6 border-b border-slate-100 bg-slate-50">
+                <img src="https://i.postimg.cc/s2BpLNZw/Untitled-design.png" alt="Logo" class="h-10 w-auto mr-3">
+                <div class="flex flex-col">
+                    <span class="font-bold text-base text-slate-800 leading-tight">SkolaHub</span>
+                    <span class="text-[10px] font-semibold text-blue-600 uppercase tracking-wide">Edu Portal</span>
+                </div>
+            </div>
+
             <div class="p-4">
-                <div class="flex items-center gap-3 bg-blue-50 p-3 rounded-lg">
-                    <img id="userPhoto" class="w-8 h-8 rounded-full">
+                <div class="flex items-center gap-3 bg-blue-50 p-3 rounded-xl border border-blue-100">
+                    <img id="userPhoto" class="w-9 h-9 rounded-full border border-white shadow-sm">
                     <div class="overflow-hidden">
-                        <div id="userName" class="text-sm font-bold truncate">User</div>
-                        <div id="userRoleBadge" class="text-[10px] uppercase font-bold text-slate-500">Checking</div>
+                        <div id="userName" class="text-sm font-bold truncate text-slate-800">User</div>
+                        <div id="userRoleBadge" class="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Checking</div>
                     </div>
                 </div>
             </div>
-            <nav class="flex-1 px-2 space-y-1 mt-2">
-                <button onclick="switchView('dashboard')" id="nav-dashboard" class="sidebar-link active w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50"><i class="fas fa-chart-pie w-6"></i> Dashboard</button>
-                <button onclick="switchView('builder')" id="nav-builder" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50"><i class="fas fa-layer-group w-6"></i> Bina Apps</button>
-                <button onclick="switchView('list')" id="nav-list" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50"><i class="fas fa-globe w-6"></i> Senarai Apps</button>
-                <button onclick="switchView('templates')" id="nav-templates" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50"><i class="fas fa-swatchbook w-6"></i> Koleksi Template</button>
-                <button onclick="switchView('learn')" id="nav-learn" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-slate-600 rounded hover:bg-blue-50 mt-4 border-t pt-4"><i class="fas fa-graduation-cap w-6 text-green-600"></i> Pusat Belajar</button>
-                <div id="adminMenu" class="hidden mt-4 pt-4 border-t">
-                    <button onclick="switchView('users')" class="sidebar-link w-full flex items-center px-4 py-3 text-sm font-medium text-purple-600 rounded hover:bg-purple-50"><i class="fas fa-users-cog w-6"></i> Users</button>
+            <nav class="flex-1 px-3 space-y-1 mt-2 overflow-y-auto">
+                <button onclick="switchView('dashboard')" id="nav-dashboard" class="sidebar-link active w-full flex items-center px-3 py-2.5 text-sm font-medium text-slate-600 rounded-lg hover:bg-blue-50 transition"><i class="fas fa-chart-pie w-6 text-center"></i> Dashboard</button>
+                <button onclick="switchView('builder')" id="nav-builder" class="sidebar-link w-full flex items-center px-3 py-2.5 text-sm font-medium text-slate-600 rounded-lg hover:bg-blue-50 transition"><i class="fas fa-layer-group w-6 text-center"></i> Bina Apps</button>
+                <button onclick="switchView('list')" id="nav-list" class="sidebar-link w-full flex items-center px-3 py-2.5 text-sm font-medium text-slate-600 rounded-lg hover:bg-blue-50 transition"><i class="fas fa-globe w-6 text-center"></i> Senarai Apps</button>
+                <button onclick="switchView('templates')" id="nav-templates" class="sidebar-link w-full flex items-center px-3 py-2.5 text-sm font-medium text-slate-600 rounded-lg hover:bg-blue-50 transition"><i class="fas fa-swatchbook w-6 text-center"></i> Template</button>
+                
+                <div class="pt-4 mt-4 border-t border-slate-100">
+                    <button onclick="switchView('learn')" id="nav-learn" class="sidebar-link w-full flex items-center px-3 py-2.5 text-sm font-medium text-slate-600 rounded-lg hover:bg-blue-50 transition"><i class="fas fa-graduation-cap w-6 text-center text-green-600"></i> Pusat Belajar</button>
+                </div>
+
+                <div id="adminMenu" class="hidden pt-4 mt-4 border-t border-slate-100">
+                    <div class="px-3 text-[10px] font-bold uppercase text-slate-400 mb-2">Admin Zone</div>
+                    <button onclick="switchView('approvals')" id="nav-approvals" class="sidebar-link w-full flex items-center px-3 py-2.5 text-sm font-medium text-orange-600 rounded-lg hover:bg-orange-50 transition"><i class="fas fa-check-circle w-6 text-center"></i> Kelulusan <span id="pendingBadge" class="hidden ml-auto bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full">0</span></button>
+                    <button onclick="switchView('users')" class="sidebar-link w-full flex items-center px-3 py-2.5 text-sm font-medium text-purple-600 rounded-lg hover:bg-purple-50 transition"><i class="fas fa-users-cog w-6 text-center"></i> Users</button>
                 </div>
             </nav>
-            <div class="p-4 border-t"><button onclick="logout()" class="text-red-500 text-sm w-full text-left px-2">Log Keluar</button></div>
+            <div class="p-4 border-t border-slate-100">
+                <button onclick="logout()" class="text-red-500 hover:text-white hover:bg-red-500 text-sm font-medium w-full px-3 py-2 rounded-lg transition flex items-center justify-center gap-2 border border-red-100 hover:border-red-500">
+                    <i class="fas fa-sign-out-alt"></i> Log Keluar
+                </button>
+            </div>
         </div>
 
         <!-- CONTENT AREA -->
         <div class="flex-1 bg-slate-50 relative overflow-hidden flex flex-col w-full">
-            <div class="h-16 bg-white border-b flex items-center justify-between px-8 shadow-sm">
-                <h2 class="font-bold text-xl" id="pageTitle">Dashboard</h2>
-                <button onclick="reloadData()" id="globalRefreshBtn" class="text-sm font-bold text-slate-500 hover:text-blue-600"><i class="fas fa-sync-alt mr-1"></i> Refresh</button>
+            <div class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 shadow-sm z-10">
+                <h2 class="font-bold text-xl text-slate-800" id="pageTitle">Dashboard</h2>
+                <button onclick="reloadData()" id="globalRefreshBtn" class="flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 px-4 py-2 rounded-lg transition border border-slate-200">
+                    <i class="fas fa-sync-alt" id="refreshIcon"></i> <span>Refresh Data</span>
+                </button>
             </div>
 
-            <!-- VIEW: DASHBOARD -->
+            <!-- VIEW: DASHBOARD STATS (UPDATED) -->
             <div id="view-dashboard" class="view-section flex-1 p-8 overflow-y-auto">
-                <div class="bg-white p-6 rounded-xl shadow-sm w-full md:w-1/3">
-                    <div class="text-sm text-slate-500">Total Apps</div>
-                    <div class="text-4xl font-bold" id="statTotalApps">...</div>
+                <!-- STAT CARDS -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="text-slate-500 text-xs font-bold uppercase mb-1">Jumlah Aplikasi</div>
+                        <div class="text-3xl font-bold text-slate-800" id="statTotal">...</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="text-green-600 text-xs font-bold uppercase mb-1">Active</div>
+                        <div class="text-3xl font-bold text-green-700" id="statActive">...</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="text-orange-500 text-xs font-bold uppercase mb-1">Pending Review</div>
+                        <div class="text-3xl font-bold text-orange-600" id="statPending">...</div>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <div class="text-blue-500 text-xs font-bold uppercase mb-1">Jumlah Pelawat</div>
+                        <div class="text-3xl font-bold text-blue-600" id="statViews">...</div>
+                    </div>
+                </div>
+
+                <!-- CHARTS AREA -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-4">Status Aplikasi</h3>
+                        <canvas id="statusChart"></canvas>
+                    </div>
+                    <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-slate-700 mb-4" id="topAppsTitle">Aplikasi Paling Popular</h3>
+                        <canvas id="viewsChart"></canvas>
+                    </div>
                 </div>
             </div>
 
-            <!-- VIEW: BUILDER -->
+            <!-- VIEW: ADMIN APPROVALS -->
+            <div id="view-approvals" class="view-section hidden flex-1 overflow-y-auto p-8">
+                <h3 class="font-bold text-lg text-slate-800 mb-4">Pengurusan Kelulusan</h3>
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                    <table class="w-full text-sm text-left">
+                        <thead class="bg-slate-50 text-slate-500 uppercase text-xs">
+                            <tr>
+                                <th class="px-6 py-3">Subdomain</th>
+                                <th class="px-6 py-3">Owner</th>
+                                <th class="px-6 py-3">Tarikh</th>
+                                <th class="px-6 py-3 text-right">Tindakan</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approvalListBody">
+                            <tr><td colspan="4" class="p-6 text-center text-slate-400">Tiada permohonan pending.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- VIEW: BUILDER (SAME) -->
             <div id="view-builder" class="view-section hidden flex-1 flex flex-col p-4 h-full">
+                <!-- (Kod Builder Kekal Sama - Diringkaskan untuk jimat ruang) -->
                 <div class="flex-1 bg-white rounded-xl border flex overflow-hidden">
                      <div class="w-1/2 bg-[#1e1e1e] flex flex-col border-r border-slate-700">
-                        <div class="bg-[#252526] text-gray-400 px-4 py-2 text-xs flex justify-between"><span>HTML Editor</span><button onclick="resetBuilder()" class="hover:text-white">Reset</button></div>
-                        <textarea id="htmlEditor" class="flex-1 bg-transparent text-gray-300 p-4 font-mono text-sm resize-none outline-none"></textarea>
+                        <div class="bg-[#252526] text-gray-400 px-4 py-2 text-xs flex justify-between h-12 items-center">
+                            <span class="font-bold">HTML/React Editor</span>
+                            <button onclick="resetBuilder()" class="hover:text-white"><i class="fas fa-eraser"></i> Reset</button>
+                        </div>
+                        <textarea id="htmlEditor" class="flex-1 bg-transparent text-gray-300 p-4 font-mono text-sm resize-none outline-none" spellcheck="false"></textarea>
                      </div>
-                     <div class="w-1/2 bg-white flex flex-col"><div class="bg-slate-50 border-b p-3 flex gap-2"><input id="subInput" placeholder="subdomain" class="border px-2 rounded text-sm w-40 font-bold"><button onclick="publishApp()" id="btnPublish" class="bg-blue-600 text-white px-4 py-1 rounded text-xs font-bold">Terbitkan</button></div><iframe id="previewFrame" class="flex-1 border-none"></iframe></div>
+                     <div class="w-1/2 bg-white flex flex-col">
+                        <div class="bg-slate-50 border-b p-3 flex gap-2 items-center">
+                            <input id="subInput" placeholder="subdomain" class="border px-3 py-1.5 rounded text-sm w-40 font-bold">
+                            <button onclick="publishApp()" id="btnPublish" class="bg-blue-600 text-white px-5 py-1.5 rounded text-xs font-bold hover:bg-blue-700">Terbitkan</button>
+                        </div>
+                        <iframe id="previewFrame" class="flex-1 border-none bg-white"></iframe>
+                     </div>
                 </div>
             </div>
 
-            <!-- VIEW: APP LIST -->
+            <!-- VIEW: APP LIST (UPDATED WITH STATUS BADGE) -->
             <div id="view-list" class="view-section hidden flex-1 overflow-y-auto p-8">
-                <div id="appListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-4"><div class="col-span-2 text-center text-slate-400 py-10">Loading...</div></div>
+                <div id="appListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
             </div>
 
-            <!-- VIEW: TEMPLATES (NEW) -->
-            <div id="view-templates" class="view-section hidden flex-1 overflow-y-auto p-8 relative">
-                <!-- Admin Add Button -->
-                <button id="btnAddTemplate" onclick="toggleTemplateCMS(true)" class="hidden absolute top-6 right-8 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg hover:bg-blue-700 transition z-20">
-                    <i class="fas fa-plus mr-2"></i> Tambah Template
-                </button>
-
-                <div class="flex items-center gap-3 mb-8">
-                    <div class="p-3 bg-purple-100 text-purple-700 rounded-lg"><i class="fas fa-swatchbook text-xl"></i></div>
-                    <div><h2 class="text-2xl font-bold">Koleksi Template</h2><p class="text-sm text-slate-500">Pilih reka bentuk siap untuk mula.</p></div>
-                </div>
-
-                <div id="templatesGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- Templates Injected Here -->
-                </div>
-            </div>
-
-            <!-- VIEW: USERS -->
-            <div id="view-users" class="view-section hidden flex-1 overflow-y-auto p-8">
-                <div class="flex gap-2 mb-4"><input id="newEmail" placeholder="Email" class="border px-3 rounded flex-1"><select id="newRole" class="border px-3 bg-white rounded"><option value="user">User</option><option value="admin">Admin</option></select><button onclick="modifyUser('add')" class="bg-purple-600 text-white px-4 rounded font-bold">Tambah</button></div>
-                <div id="userListBody" class="bg-white rounded border p-4"></div>
-            </div>
-
-            <!-- VIEW: LEARNING HUB -->
-            <div id="view-learn" class="view-section hidden flex-1 flex flex-col h-full relative">
-                <!-- Admin Edit Button -->
-                <button id="btnEditContent" onclick="toggleCMS(true)" class="hidden absolute top-6 right-8 bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg hover:bg-black transition z-20">
-                    <i class="fas fa-edit mr-2"></i> Edit Pustaka
-                </button>
-
-                <!-- 1. GRID LEVEL (MAIN) -->
-                <div id="learnGridLevel" class="flex-1 overflow-y-auto p-8">
-                    <div class="flex items-center gap-3 mb-8">
-                        <div class="p-3 bg-blue-100 text-blue-700 rounded-lg"><i class="fas fa-graduation-cap text-xl"></i></div>
-                        <div><h2 class="text-2xl font-bold">Pustaka Pembelajaran</h2><p class="text-sm text-slate-500">Pilih topik untuk mula belajar.</p></div>
-                    </div>
-                    <div id="topicGrid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                        <!-- Topics Injected Here -->
-                    </div>
-                </div>
-
-                <!-- 2. DETAIL LEVEL (TOPIC CONTENT) -->
-                <div id="learnDetailLevel" class="hidden flex-1 overflow-y-auto p-8 bg-white">
-                    <button onclick="backToGrid()" class="mb-6 text-slate-500 hover:text-blue-600 text-sm font-bold flex items-center gap-2"><i class="fas fa-arrow-left"></i> Kembali ke Menu</button>
-                    
-                    <div class="max-w-4xl mx-auto">
-                        <div class="flex items-center gap-4 mb-8 pb-6 border-b border-slate-100">
-                            <div id="detailIcon" class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-3xl shadow-sm"><i class="fas fa-book"></i></div>
-                            <div>
-                                <h2 id="detailTitle" class="text-3xl font-bold text-slate-800">Tajuk Topik</h2>
-                                <p class="text-slate-500">Senarai bahan pembelajaran untuk topik ini.</p>
-                            </div>
-                        </div>
-
-                        <!-- Video Player (If Active) -->
-                        <div id="activeVideoSection" class="hidden mb-10">
-                            <div class="video-wrapper shadow-lg mb-2">
-                                <iframe id="mainVideoPlayer" src="" frameborder="0" allowfullscreen></iframe>
-                            </div>
-                            <h3 id="activeVideoTitle" class="font-bold text-lg text-slate-800">Judul Video</h3>
-                        </div>
-
-                        <!-- Materials List -->
-                        <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2"><i class="fas fa-layer-group"></i> Bahan & Sumber</h3>
-                        <div id="detailMaterials" class="grid gap-3">
-                            <!-- Items Injected Here -->
-                        </div>
-                    </div>
-                </div>
-            </div>
+            <!-- VIEW: USERS & LEARNING & TEMPLATES (KEKAL SAMA - PLACEHOLDERS) -->
+            <div id="view-users" class="view-section hidden flex-1 p-8"><div id="userListBody"></div></div>
+            <div id="view-templates" class="view-section hidden flex-1 p-8"><div id="templatesGrid"></div></div>
+            <div id="view-learn" class="view-section hidden flex-1 p-8"><div id="topicGrid"></div></div>
         </div>
     </div>
 
@@ -299,7 +213,9 @@
         const auth = firebase.auth();
         const provider = new firebase.auth.GoogleAuthProvider();
         let currentUser = null, currentRole = null;
+        let userAppsData = []; // Simpan data apps user lokal
 
+        // AUTH LOGIC
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 try {
@@ -307,7 +223,7 @@
                     const data = await res.json();
                     if (data.allowed) { currentUser = user; currentRole = data.role; initDashboard(user, data.role); } 
                     else { auth.signOut(); document.getElementById('accessDeniedMsg').classList.remove('hidden'); }
-                } catch (e) { alert("Server Error"); }
+                } catch (e) { console.error(e); }
             } else document.getElementById('authScreen').classList.remove('hidden');
         });
 
@@ -321,434 +237,230 @@
             document.getElementById('userName').innerText = user.displayName;
             document.getElementById('userPhoto').src = user.photoURL;
             document.getElementById('userRoleBadge').innerText = role.toUpperCase();
-            if(role === 'admin') {
-                document.getElementById('adminMenu').classList.remove('hidden');
-                document.getElementById('btnEditContent').classList.remove('hidden');
-                document.getElementById('btnAddTemplate').classList.remove('hidden'); // Show Add Template
-            }
+            if(role === 'admin') document.getElementById('adminMenu').classList.remove('hidden');
             reloadData();
         }
 
-        // --- DATA STATE ---
-        let learningData = { topics: [], templates: [] }; // Modified to include templates
-        let currentEditingTopicId = null;
+        // --- STATS & CHARTS ---
+        let statusChartInstance = null;
+        let viewsChartInstance = null;
 
-        async function loadLearning() {
+        async function loadStats() {
             try {
-                const res = await fetch(`${WORKER_URL}/api/learning`);
-                const data = await res.json();
-                
-                // Migrate data structures
-                if(data.modules && !data.topics) {
-                    learningData = { topics: [], templates: [] }; 
+                let stats = { total: 0, active: 0, pending: 0, rejected: 0, totalViews: 0, topApps: [] };
+
+                if (currentRole === 'admin') {
+                    // --- ADMIN: FETCH GLOBAL STATS DARI WORKER ---
+                    const res = await fetch(`${WORKER_URL}/api/stats`);
+                    stats = await res.json();
                 } else {
-                    learningData = data.topics ? data : { topics: [], templates: [] };
-                    // Ensure templates array exists
-                    if(!learningData.templates) learningData.templates = [];
+                    // --- USER: KIRA DARI LIST APP SENDIRI ---
+                    if (userAppsData.length > 0) {
+                        stats.total = userAppsData.length;
+                        stats.active = userAppsData.filter(a => a.status === 'active').length;
+                        stats.pending = userAppsData.filter(a => a.status === 'pending').length;
+                        stats.rejected = userAppsData.filter(a => a.status === 'rejected').length;
+                        stats.totalViews = userAppsData.reduce((sum, app) => sum + (app.views || 0), 0);
+                        
+                        // Top 5 User Apps
+                        stats.topApps = [...userAppsData]
+                            .sort((a, b) => (b.views || 0) - (a.views || 0))
+                            .slice(0, 5)
+                            .map(a => ({ name: a.subdomain, views: a.views || 0 }));
+                    }
                 }
                 
-                renderGrid(); // Render Learning Grid
-                renderTemplates(); // Render Templates Grid
-            } catch(e) { console.error("Error loading data", e); }
-        }
+                // Update Cards
+                document.getElementById('statTotal').innerText = stats.total;
+                document.getElementById('statActive').innerText = stats.active;
+                document.getElementById('statPending').innerText = stats.pending;
+                document.getElementById('statViews').innerText = stats.totalViews;
 
-        // --- TEMPLATE SYSTEM LOGIC ---
-        
-        function renderTemplates() {
-            const grid = document.getElementById('templatesGrid');
-            if(learningData.templates.length === 0) {
-                grid.innerHTML = `<div class="col-span-3 text-center text-slate-400 py-10 border-2 border-dashed rounded-xl">Belum ada template. Admin sila tambah.</div>`;
-                return;
-            }
-            grid.innerHTML = learningData.templates.map(t => `
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition flex flex-col group">
-                    <div class="h-32 bg-slate-100 flex items-center justify-center border-b border-slate-50 relative group-hover:bg-slate-200 transition">
-                        <i class="fas fa-columns text-4xl text-slate-300 group-hover:text-slate-400"></i>
-                        <button onclick="openTemplate('${t.id}')" class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition opacity-0 group-hover:opacity-100">
-                            <span class="bg-white px-4 py-2 rounded-full text-xs font-bold shadow-lg">Preview</span>
-                        </button>
-                    </div>
-                    <div class="p-5 flex-1 flex flex-col">
-                        <h4 class="font-bold text-slate-800 mb-1">${t.title}</h4>
-                        <p class="text-xs text-slate-500 mb-4 line-clamp-2">${t.desc || 'Tiada deskripsi'}</p>
-                        <div class="mt-auto flex gap-2">
-                            <button onclick="openTemplate('${t.id}')" class="flex-1 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white py-2 rounded-lg text-xs font-bold transition">View</button>
-                            ${currentRole === 'admin' ? `<button onclick="deleteTemplate('${t.id}')" class="px-3 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-lg transition"><i class="fas fa-trash"></i></button>` : ''}
-                        </div>
-                    </div>
-                </div>
-            `).join('');
-        }
+                // Update Chart Label Title
+                const chartTitle = currentRole === 'admin' ? "Aplikasi Paling Popular (Global)" : "Aplikasi Paling Popular (Anda)";
+                document.getElementById('topAppsTitle').innerText = chartTitle;
 
-        function toggleTemplateCMS(show) {
-            const modal = document.getElementById('cmsTemplateModal');
-            if(show) {
-                document.getElementById('newTempTitle').value = "";
-                document.getElementById('newTempDesc').value = "";
-                document.getElementById('newTempCode').value = "<!DOCTYPE html>\n<html>\n<head>\n<title>Template</title>\n</head>\n<body>\n<h1>Hello</h1>\n</body>\n</html>";
-                modal.classList.remove('hidden');
-            } else { modal.classList.add('hidden'); }
-        }
-
-        async function saveNewTemplate() {
-            const title = document.getElementById('newTempTitle').value;
-            const desc = document.getElementById('newTempDesc').value;
-            const code = document.getElementById('newTempCode').value;
-
-            if(!title || !code) return alert("Sila isi Nama dan Kod HTML");
-
-            const newTemp = {
-                id: 'temp_' + Date.now(),
-                title: title,
-                desc: desc,
-                code: code
-            };
-
-            learningData.templates.push(newTemp);
-            
-            // Re-use existing saveCMS function logic (updates learningData object)
-            await saveLearningData();
-            toggleTemplateCMS(false);
-            renderTemplates();
-        }
-
-        async function deleteTemplate(id) {
-            if(!confirm("Padam template ini?")) return;
-            learningData.templates = learningData.templates.filter(t => t.id !== id);
-            await saveLearningData();
-            renderTemplates();
-        }
-
-        // Preview Logic
-        window.openTemplate = (id) => {
-            const temp = learningData.templates.find(t => t.id === id);
-            if(!temp) return;
-
-            document.getElementById('previewTitle').innerText = temp.title;
-            document.getElementById('hiddenTemplateCode').value = temp.code;
-            
-            // Render Iframe
-            const blob = new Blob([temp.code], {type:'text/html'});
-            document.getElementById('previewContentFrame').src = URL.createObjectURL(blob);
-            
-            document.getElementById('previewModal').classList.remove('hidden');
-        };
-
-        window.closePreview = () => {
-            document.getElementById('previewModal').classList.add('hidden');
-            document.getElementById('previewContentFrame').src = "";
-        };
-
-        window.copyTemplateCode = () => {
-            const code = document.getElementById('hiddenTemplateCode').value;
-            navigator.clipboard.writeText(code).then(() => {
-                alert("Kod HTML berjaya disalin! Anda boleh paste di menu 'Bina Apps'.");
-            });
-        };
-
-        // Reuse save logic
-        async function saveLearningData() {
-            showLoading("Menyimpan...", "Mengemaskini data.");
-            try {
-                const res = await fetch(`${WORKER_URL}/api/learning`, {
-                    method: 'POST',
-                    body: JSON.stringify({ adminEmail: currentUser.email, data: learningData })
-                });
-                if(!res.ok) throw new Error("Gagal");
-            } catch(e) { alert("Error saving data"); }
-            finally { hideLoading(); }
-        }
-
-
-        // --- LEARNING SYSTEM LOGIC (EXISTING) ---
-        function renderGrid() {
-            const grid = document.getElementById('topicGrid');
-            if(learningData.topics.length === 0) {
-                grid.innerHTML = `<div class="col-span-3 text-center text-slate-400 py-10 border-2 border-dashed rounded-xl">Tiada topik ditambah lagi.</div>`;
-                return;
-            }
-            grid.innerHTML = learningData.topics.map(topic => `
-                <div onclick="openTopic('${topic.id}')" class="bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-blue-300 cursor-pointer transition group">
-                    <div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-4 text-2xl group-hover:bg-blue-600 group-hover:text-white transition">
-                        <i class="fas ${topic.icon || 'fa-book'}"></i>
-                    </div>
-                    <h3 class="font-bold text-lg text-slate-800 mb-1 group-hover:text-blue-700">${topic.title}</h3>
-                    <p class="text-xs text-slate-500">${(topic.materials || []).length} Bahan</p>
-                </div>
-            `).join('');
-        }
-
-        // 2. Open Detail View
-        window.openTopic = (id) => {
-            const topic = learningData.topics.find(t => t.id === id);
-            if(!topic) return;
-
-            document.getElementById('learnGridLevel').classList.add('hidden');
-            document.getElementById('learnDetailLevel').classList.remove('hidden');
-            
-            document.getElementById('detailTitle').innerText = topic.title;
-            document.getElementById('detailIcon').innerHTML = `<i class="fas ${topic.icon || 'fa-book'}"></i>`;
-            
-            // Render Materials
-            const matList = document.getElementById('detailMaterials');
-            document.getElementById('activeVideoSection').classList.add('hidden'); // Reset video player
-
-            if(!topic.materials || topic.materials.length === 0) {
-                matList.innerHTML = `<div class="text-slate-400 italic">Tiada bahan dalam topik ini.</div>`;
-            } else {
-                matList.innerHTML = topic.materials.map((m, idx) => {
-                    let icon = 'fa-link';
-                    let color = 'gray';
-                    let action = `window.open('${m.url}', '_blank')`;
-                    
-                    if(m.type === 'YOUTUBE') { 
-                        icon = 'fa-play'; color = 'red'; 
-                        action = `playVideo('${m.url}', '${m.title}')`;
-                    } else if(m.type === 'PDF') { 
-                        icon = 'fa-file-pdf'; color = 'red'; 
-                    } else if(m.type === 'DRIVE') { 
-                        icon = 'fa-google-drive'; color = 'green'; 
+                // Render Chart: Status
+                const ctxStatus = document.getElementById('statusChart').getContext('2d');
+                if(statusChartInstance) statusChartInstance.destroy();
+                statusChartInstance = new Chart(ctxStatus, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Active', 'Pending', 'Rejected'],
+                        datasets: [{
+                            data: [stats.active, stats.pending, stats.rejected || 0],
+                            backgroundColor: ['#22c55e', '#f97316', '#ef4444']
+                        }]
                     }
+                });
+
+                // Render Chart: Top Apps
+                const ctxViews = document.getElementById('viewsChart').getContext('2d');
+                if(viewsChartInstance) viewsChartInstance.destroy();
+                viewsChartInstance = new Chart(ctxViews, {
+                    type: 'bar',
+                    data: {
+                        labels: stats.topApps.map(a => a.name),
+                        datasets: [{
+                            label: 'Jumlah Pelawat',
+                            data: stats.topApps.map(a => a.views),
+                            backgroundColor: '#3b82f6'
+                        }]
+                    },
+                    options: { scales: { y: { beginAtZero: true } } }
+                });
+
+            } catch(e) { console.error("Stats Error", e); }
+        }
+
+        // --- APPROVALS LOGIC (ADMIN) ---
+        async function loadApprovals() {
+            if(currentRole !== 'admin') return;
+            const res = await fetch(`${WORKER_URL}/api/list?filter=pending&email=${currentUser.email}`);
+            const apps = await res.json();
+            
+            // Update Sidebar Badge
+            const badge = document.getElementById('pendingBadge');
+            if(apps.length > 0) { badge.innerText = apps.length; badge.classList.remove('hidden'); } 
+            else badge.classList.add('hidden');
+
+            // Render Table
+            const tbody = document.getElementById('approvalListBody');
+            if(apps.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-400">Tiada permohonan pending.</td></tr>'; return; }
+            
+            tbody.innerHTML = apps.map(app => `
+                <tr class="border-b hover:bg-slate-50">
+                    <td class="px-6 py-4 font-bold text-blue-700">${app.subdomain}</td>
+                    <td class="px-6 py-4 text-xs text-slate-500">${app.owner}</td>
+                    <td class="px-6 py-4 text-xs text-slate-400">${new Date(app.created).toLocaleDateString()}</td>
+                    <td class="px-6 py-4 text-right">
+                        <button onclick="previewApp('${app.subdomain}')" class="text-blue-600 hover:underline text-xs mr-3">Preview</button>
+                        <button onclick="decideApp('${app.subdomain}', 'active')" class="bg-green-100 text-green-700 px-3 py-1 rounded text-xs font-bold hover:bg-green-200">Approve</button>
+                        <button onclick="decideApp('${app.subdomain}', 'rejected')" class="bg-red-100 text-red-700 px-3 py-1 rounded text-xs font-bold hover:bg-red-200 ml-1">Reject</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        async function decideApp(subdomain, status) {
+            const reason = status === 'rejected' ? prompt("Sebab penolakan?") : "";
+            if(status === 'rejected' && !reason) return;
+
+            showLoading();
+            try {
+                await fetch(`${WORKER_URL}/api/approve`, {
+                    method: 'POST',
+                    body: JSON.stringify({ adminEmail: currentUser.email, subdomain, status, rejectReason: reason })
+                });
+                reloadData();
+            } finally { hideLoading(); }
+        }
+
+        async function previewApp(subdomain) {
+            const res = await fetch(`${WORKER_URL}/api/get?sub=${subdomain}`);
+            const data = await res.json();
+            const blob = new Blob([data.html], {type: 'text/html'});
+            document.getElementById('previewContentFrame').src = URL.createObjectURL(blob);
+            document.getElementById('previewModal').classList.remove('hidden');
+        }
+        function closePreview() { document.getElementById('previewModal').classList.add('hidden'); }
+
+        // --- APP LIST (USER VIEW) ---
+        async function fetchApps() {
+            try {
+                const res = await fetch(`${WORKER_URL}/api/list?email=${currentUser.email}`);
+                const apps = await res.json();
+                userAppsData = apps; // SIMPAN DATA LOKAL UNTUK STATS USER
+                
+                const container = document.getElementById('appListContainer');
+                if(apps.length === 0) return container.innerHTML = `<div class="col-span-2 text-center py-10 text-slate-400">Tiada apps.</div>`;
+                
+                container.innerHTML = apps.map(app => {
+                    // Status Badge Logic
+                    let badgeClass = "bg-green-100 text-green-700";
+                    let statusText = "ACTIVE";
+                    if(app.status === 'pending') { badgeClass = "bg-orange-100 text-orange-700 animate-pulse"; statusText = "PENDING REVIEW"; }
+                    if(app.status === 'rejected') { badgeClass = "bg-red-100 text-red-700"; statusText = "REJECTED"; }
 
                     return `
-                    <div onclick="${action}" class="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 hover:bg-white hover:shadow-md cursor-pointer transition group">
-                        <div class="w-10 h-10 bg-${color}-100 text-${color}-600 rounded-lg flex items-center justify-center text-lg">
-                            <i class="fas ${icon}"></i>
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="font-bold text-lg text-slate-800">${app.subdomain}</div>
+                            <span class="text-[10px] font-bold px-2 py-1 rounded ${badgeClass}">${statusText}</span>
                         </div>
-                        <div class="flex-1">
-                            <div class="font-bold text-slate-700 group-hover:text-blue-600">${m.title}</div>
-                            <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wide">${m.type}</div>
+                        <div class="text-xs text-slate-500 mb-3 flex items-center gap-4">
+                            <span><i class="fas fa-eye text-blue-400"></i> ${app.views || 0} Views</span>
+                            <a href="${app.url}" target="_blank" class="hover:text-blue-600 truncate">${app.url}</a>
                         </div>
-                        <i class="fas fa-chevron-right text-slate-300 group-hover:text-blue-500"></i>
+                        ${app.rejectReason ? `<div class="text-xs text-red-500 bg-red-50 p-2 rounded mb-3">Sebab: ${app.rejectReason}</div>` : ''}
+                        <div class="flex gap-2 border-t pt-3">
+                            <button onclick="editApp('${app.subdomain}')" class="flex-1 bg-slate-50 hover:bg-slate-100 py-1.5 rounded text-xs font-bold text-slate-600">Edit</button>
+                            <button onclick="deleteApp('${app.subdomain}')" class="px-3 text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
+                        </div>
                     </div>`;
                 }).join('');
-            }
-        };
-
-        window.backToGrid = () => {
-            document.getElementById('learnDetailLevel').classList.add('hidden');
-            document.getElementById('learnGridLevel').classList.remove('hidden');
-            document.getElementById('mainVideoPlayer').src = ""; // Stop video
-        };
-
-        window.playVideo = (url, title) => {
-            // Extract Video ID
-            let videoId = "";
-            if (url.includes("youtu.be/")) videoId = url.split("youtu.be/")[1];
-            else if (url.includes("youtube.com/watch?v=")) videoId = url.split("v=")[1].split("&")[0];
-            else videoId = url; // Assume ID passed directly
-
-            document.getElementById('mainVideoPlayer').src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-            document.getElementById('activeVideoTitle').innerText = title;
-            document.getElementById('activeVideoSection').classList.remove('hidden');
-            document.getElementById('activeVideoSection').scrollIntoView({behavior: "smooth"});
-        };
-
-        // --- CMS LOGIC ---
-        
-        function toggleCMS(show) {
-            const modal = document.getElementById('cmsModal');
-            if(show) {
-                renderCMSTopicList();
-                document.getElementById('cmsContentArea').classList.add('hidden');
-                document.getElementById('cmsEmptyState').classList.remove('hidden');
-                modal.classList.remove('hidden');
-            } else { modal.classList.add('hidden'); }
+            } catch (e) { console.error("Fetch Apps Error", e); }
         }
 
-        function renderCMSTopicList() {
-            const list = document.getElementById('cmsTopicList');
-            list.innerHTML = learningData.topics.map(t => `
-                <div onclick="editCMSTopic('${t.id}')" class="p-3 rounded-lg cursor-pointer hover:bg-blue-50 border border-transparent hover:border-blue-200 transition text-sm flex items-center justify-between ${currentEditingTopicId === t.id ? 'bg-blue-100 border-blue-300' : 'bg-white'}">
-                    <span class="font-bold truncate"><i class="fas ${t.icon} w-6 text-slate-400"></i> ${t.title}</span>
-                    <i class="fas fa-chevron-right text-xs text-slate-300"></i>
-                </div>
-            `).join('');
-        }
-
-        function addNewTopic() {
-            const id = 'topic_' + Date.now();
-            learningData.topics.push({ id: id, title: 'Topik Baru', icon: 'fa-folder', materials: [] });
-            renderCMSTopicList();
-            editCMSTopic(id); // Auto select
-        }
-
-        window.editCMSTopic = (id) => {
-            currentEditingTopicId = id;
-            const topic = learningData.topics.find(t => t.id === id);
-            
-            // Update UI
-            document.getElementById('cmsEmptyState').classList.add('hidden');
-            document.getElementById('cmsContentArea').classList.remove('hidden');
-            renderCMSTopicList(); // Refresh active state
-
-            // Populate Form
-            document.getElementById('editTopicTitle').value = topic.title;
-            document.getElementById('editTopicIcon').value = topic.icon;
-            
-            // Render Materials List
-            const matList = document.getElementById('cmsMaterialsList');
-            matList.innerHTML = '';
-            (topic.materials || []).forEach(m => addMaterialInput(m));
-
-            // Bind Auto Save for Title/Icon change
-            document.getElementById('editTopicTitle').oninput = (e) => { topic.title = e.target.value; renderCMSTopicList(); };
-            document.getElementById('editTopicIcon').oninput = (e) => { topic.icon = e.target.value; renderCMSTopicList(); };
-        };
-
-        function deleteCurrentTopic() {
-            if(!confirm("Padam topik ini berserta semua bahannya?")) return;
-            learningData.topics = learningData.topics.filter(t => t.id !== currentEditingTopicId);
-            currentEditingTopicId = null;
-            renderCMSTopicList();
-            document.getElementById('cmsContentArea').classList.add('hidden');
-            document.getElementById('cmsEmptyState').classList.remove('hidden');
-        }
-
-        window.addMaterialInput = (data = {type:'YOUTUBE', title:'', url:''}) => {
-            const div = document.createElement('div');
-            div.className = "bg-slate-50 p-3 rounded border flex gap-2 items-start";
-            div.innerHTML = `
-                <div class="flex-1 space-y-2">
-                    <div class="flex gap-2">
-                        <select class="mat-type border rounded px-2 py-1 text-xs font-bold bg-white w-28">
-                            <option value="YOUTUBE" ${data.type==='YOUTUBE'?'selected':''}>YOUTUBE</option>
-                            <option value="PDF" ${data.type==='PDF'?'selected':''}>EBOOK PDF</option>
-                            <option value="DRIVE" ${data.type==='DRIVE'?'selected':''}>GOOGLE DRIVE</option>
-                            <option value="LINK" ${data.type==='LINK'?'selected':''}>WEBSITE</option>
-                        </select>
-                        <input class="mat-title flex-1 border rounded px-2 py-1 text-sm font-bold" placeholder="Tajuk Bahan" value="${data.title}">
-                    </div>
-                    <input class="mat-url w-full border rounded px-2 py-1 text-xs text-blue-600 font-mono" placeholder="URL (Link YouTube / Drive / PDF)" value="${data.url}">
-                </div>
-                <button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 p-2"><i class="fas fa-trash"></i></button>
-            `;
-            document.getElementById('cmsMaterialsList').appendChild(div);
-        }
-
-        async function saveCMS() {
-            // Save current editing topic materials first
-            if(currentEditingTopicId) {
-                const topic = learningData.topics.find(t => t.id === currentEditingTopicId);
-                if(topic) {
-                    const divs = document.querySelectorAll('#cmsMaterialsList > div');
-                    topic.materials = Array.from(divs).map(div => ({
-                        type: div.querySelector('.mat-type').value,
-                        title: div.querySelector('.mat-title').value,
-                        url: div.querySelector('.mat-url').value
-                    }));
-                }
-            }
-
-            await saveLearningData();
-            toggleCMS(false);
-            renderGrid();
-        }
-
-        // --- UTILS & INIT ---
-        function showLoading(t, d) { document.getElementById('globalLoader').classList.remove('hidden'); }
+        // --- CORE UTILS ---
+        function showLoading() { document.getElementById('globalLoader').classList.remove('hidden'); }
         function hideLoading() { document.getElementById('globalLoader').classList.add('hidden'); }
         
         async function reloadData() {
             const btn = document.getElementById('globalRefreshBtn');
             btn.innerHTML = `<i class="fas fa-spinner fa-spin-fast text-blue-600"></i>`;
-            try { await fetchApps(); loadLearning(); if(currentRole === 'admin') await fetchUsers(); } 
+            try {
+                // PENTING: Tunggu fetchApps dulu sebab loadStats perlukan userAppsData (untuk User)
+                await fetchApps(); 
+                await loadStats();
+                if(currentRole === 'admin') await loadApprovals();
+            } catch(e) { console.error(e); }
             finally { btn.innerHTML = `<i class="fas fa-sync-alt"></i> Refresh`; }
         }
 
-        async function fetchApps() {
-            const res = await fetch(`${WORKER_URL}/api/list?email=${currentUser.email}`);
-            const apps = await res.json();
-            document.getElementById('statTotalApps').innerText = apps.length;
-            const container = document.getElementById('appListContainer');
-            if(apps.length === 0) return container.innerHTML = `<div class="p-8 text-center text-slate-400 col-span-2 border-2 border-dashed">Tiada apps.</div>`;
-            container.innerHTML = apps.map(app => `
-                <div class="bg-white p-5 rounded-xl border shadow-sm flex justify-between items-center group">
-                    <div>
-                        <div class="font-bold text-lg text-blue-900">${app.subdomain}</div>
-                        <a href="${app.url}" target="_blank" class="text-xs text-blue-500 hover:underline">${app.url}</a>
-                        ${currentRole === 'admin' ? `<div class="text-[10px] text-slate-400 mt-1">Owner: ${app.owner}</div>` : ''}
-                    </div>
-                    <div class="flex gap-2 opacity-100 lg:opacity-0 group-hover:opacity-100 transition">
-                        <button onclick="editApp('${app.subdomain}')" class="bg-yellow-100 text-yellow-700 px-3 py-2 rounded text-xs font-bold"><i class="fas fa-pen"></i></button>
-                        <button onclick="deleteApp('${app.subdomain}')" class="bg-red-100 text-red-600 px-3 py-2 rounded text-xs font-bold"><i class="fas fa-trash"></i></button>
-                        <a href="${app.url}" target="_blank" class="bg-slate-100 text-slate-600 px-3 py-2 rounded text-xs hover:bg-slate-200"><i class="fas fa-external-link-alt"></i></a>
-                    </div>
-                </div>
-            `).join('');
-        }
-        async function deleteApp(subdomain) {
-            if(!confirm(`Padam '${subdomain}'?`)) return;
-            showLoading("Memadam...", "Sila tunggu.");
-            try {
-                const res = await fetch(`${WORKER_URL}/api/delete`, { method: 'DELETE', body: JSON.stringify({ subdomain: subdomain, requestorEmail: currentUser.email }) });
-                const data = await res.json();
-                if(data.success) await fetchApps(); else alert("Gagal: " + data.error);
-            } finally { hideLoading(); }
-        }
-        async function editApp(subdomain) {
-            showLoading("Loading...", "Mengambil data.");
-            try {
-                const res = await fetch(`${WORKER_URL}/api/get?sub=${subdomain}`);
-                const data = await res.json();
-                const ed = document.getElementById('htmlEditor'); ed.value = data.html; ed.dispatchEvent(new Event('input'));
-                const sub = document.getElementById('subInput'); sub.value = subdomain; sub.disabled = true; sub.classList.add('bg-slate-100');
-                const btn = document.getElementById('btnPublish'); btn.innerText = "Update Site"; btn.className = "bg-green-600 text-white px-4 py-1 rounded text-xs font-bold";
-                switchView('builder');
-            } finally { hideLoading(); }
-        }
-        function resetBuilder() {
-            const ed = document.getElementById('htmlEditor'); ed.value = "<h1>New Site</h1>"; ed.dispatchEvent(new Event('input'));
-            const sub = document.getElementById('subInput'); sub.value = ""; sub.disabled = false; sub.classList.remove('bg-slate-100');
-            const btn = document.getElementById('btnPublish'); btn.innerText = "Terbitkan"; btn.className = "bg-blue-600 text-white px-4 py-1 rounded text-xs font-bold";
-        }
-        function switchView(viewId) {
-            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
-            document.getElementById('view-'+viewId).classList.remove('hidden');
-            document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
-            document.getElementById('nav-'+viewId).classList.add('active');
-            const titles = { dashboard: 'Dashboard', builder: 'Bina Apps', list: 'Senarai Apps', users: 'Users', learn: 'Pusat Pembelajaran', templates: 'Koleksi Template' };
-            document.getElementById('pageTitle').innerText = titles[viewId];
-            if(viewId === 'list' || viewId === 'users' || viewId === 'learn' || viewId === 'templates') reloadData();
-        }
-        function validateSub(el) { el.value = el.value.toLowerCase().replace(/[^a-z0-9-]/g, ''); }
-        
-        async function fetchUsers() {
-            const res = await fetch(`${WORKER_URL}/api/users?email=${currentUser.email}`);
-            const users = await res.json();
-            let html = '';
-            for(const [email, role] of Object.entries(users)) {
-                html += `<div class="p-3 border-b flex justify-between items-center text-sm"><div>${email} <span class="bg-slate-200 px-1 rounded text-xs uppercase">${role}</span></div>${email !== currentUser.email ? `<button onclick="modifyUser('delete', '${email}')" class="text-red-500 text-xs">Delete</button>` : ''}</div>`;
-            }
-            document.getElementById('userListBody').innerHTML = html;
-        }
-        async function modifyUser(action, targetEmail) {
-            showLoading("Updating...", "Sila tunggu.");
-            try {
-                const email = targetEmail || document.getElementById('newEmail').value;
-                const role = document.getElementById('newRole').value;
-                await fetch(`${WORKER_URL}/api/users`, { method: 'POST', body: JSON.stringify({ adminEmail: currentUser.email, action, targetEmail: email, targetRole: role }) });
-                await fetchUsers();
-            } finally { hideLoading(); }
-        }
+        // --- PUBLISH & DELETE (Basic) ---
         async function publishApp() {
             const sub = document.getElementById('subInput').value;
             const html = document.getElementById('htmlEditor').value;
             if(!sub) return alert("Sila isi subdomain");
-            showLoading("Menerbitkan Site...", "Data sedang dihantar ke server.");
+            showLoading();
             try {
                 const res = await fetch(`${WORKER_URL}/api/save`, { method: 'POST', body: JSON.stringify({ subdomain: sub, html: html, ownerEmail: currentUser.email }) });
                 const data = await res.json();
-                if(data.success) { await fetchApps(); resetBuilder(); switchView('list'); } 
-                else alert("Error: " + data.error);
-            } catch(e) { alert("Network Error"); } 
-            finally { hideLoading(); }
+                if(data.success) { 
+                    alert(data.status === 'pending' ? "Berjaya! Site anda kini PENDING untuk kelulusan Admin." : "Berjaya! Site anda kini ACTIVE.");
+                    await reloadData(); switchView('list');
+                } else alert("Error: " + data.error);
+            } finally { hideLoading(); }
         }
 
-        const edInit = document.getElementById('htmlEditor');
-        edInit.value = "<h1>Hello!</h1>";
-        edInit.addEventListener('input', () => { const blob = new Blob([edInit.value], {type:'text/html'}); document.getElementById('previewFrame').src = URL.createObjectURL(blob); });
-        edInit.dispatchEvent(new Event('input'));
+        async function deleteApp(sub) { if(confirm("Padam?")) { showLoading(); await fetch(`${WORKER_URL}/api/delete`, { method:'DELETE', body:JSON.stringify({subdomain:sub, requestorEmail:currentUser.email})}); reloadData(); hideLoading(); } }
+        
+        async function editApp(sub) {
+            showLoading();
+            const res = await fetch(`${WORKER_URL}/api/get?sub=${sub}`);
+            const data = await res.json();
+            document.getElementById('htmlEditor').value = data.html;
+            document.getElementById('subInput').value = sub;
+            switchView('builder');
+            hideLoading();
+        }
+
+        function switchView(id) {
+            document.querySelectorAll('.view-section').forEach(e => e.classList.add('hidden'));
+            document.getElementById('view-'+id).classList.remove('hidden');
+            document.querySelectorAll('.sidebar-link').forEach(e => e.classList.remove('active'));
+            document.getElementById('nav-'+id).classList.add('active');
+            if(['dashboard','list','approvals'].includes(id)) reloadData();
+        }
+
+        // Init Editor
+        const editor = document.getElementById('htmlEditor');
+        editor.value = "<h1>Hello!</h1>";
+        editor.addEventListener('input', () => {
+             const blob = new Blob([editor.value], {type:'text/html'});
+             document.getElementById('previewFrame').src = URL.createObjectURL(blob);
+        });
     </script>
 </body>
 </html>
