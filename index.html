@@ -39,10 +39,105 @@
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden">
             <div class="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                 <h3 class="font-bold text-lg text-slate-800">Pratonton</h3>
-                <button onclick="closePreview()" class="text-slate-400 hover:text-red-500 text-2xl"><i class="fas fa-times"></i></button>
+                <div class="flex gap-2">
+                    <button onclick="copyTemplateCode()" class="bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2 transition">
+                        <i class="fas fa-copy"></i> Salin Kod
+                    </button>
+                    <button onclick="closePreview()" class="text-slate-400 hover:text-red-500 text-2xl"><i class="fas fa-times"></i></button>
+                </div>
             </div>
             <iframe id="previewContentFrame" class="flex-1 bg-white border-none"></iframe>
             <textarea id="hiddenTemplateCode" class="hidden"></textarea>
+        </div>
+    </div>
+
+    <!-- CMS TEMPLATE MODAL (ADMIN ADD) -->
+    <div id="cmsTemplateModal" class="hidden fixed inset-0 z-[55] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-2xl flex flex-col overflow-hidden max-h-[90vh]">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h3 class="font-bold text-lg text-slate-800">Tambah Template Baru</h3>
+                <button onclick="toggleTemplateCMS(false)" class="text-slate-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Nama Template</label>
+                    <input id="newTempTitle" type="text" class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Deskripsi Pendek</label>
+                    <input id="newTempDesc" type="text" class="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                </div>
+                <div class="flex-1 flex flex-col">
+                    <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Kod HTML / React</label>
+                    <textarea id="newTempCode" class="w-full border border-slate-300 rounded-lg p-4 text-xs font-mono bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none h-64 font-mono"></textarea>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 text-right">
+                <button onclick="saveNewTemplate()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-bold text-sm shadow-sm transition">
+                    <i class="fas fa-save mr-2"></i> Simpan Template
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CMS MODAL: LEARNING HUB (ADMIN EDIT) -->
+    <div id="cmsModal" class="hidden fixed inset-0 z-[55] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div>
+                    <h3 class="font-bold text-lg text-slate-800">Urus Pusat Belajar</h3>
+                    <p class="text-xs text-slate-500">Tambah Topik & Bahan Pembelajaran</p>
+                </div>
+                <button onclick="toggleCMS(false)" class="text-slate-400 hover:text-red-500"><i class="fas fa-times text-xl"></i></button>
+            </div>
+            <div class="flex flex-1 overflow-hidden">
+                <!-- Sidebar Topik -->
+                <div class="w-1/3 border-r border-slate-100 bg-slate-50 flex flex-col">
+                    <div class="p-3 border-b border-slate-100">
+                        <button onclick="addNewTopic()" class="w-full bg-blue-600 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition shadow-sm flex items-center justify-center gap-2">
+                            <i class="fas fa-plus"></i> Topik Baru
+                        </button>
+                    </div>
+                    <div id="cmsTopicList" class="flex-1 overflow-y-auto p-2 space-y-1"></div>
+                </div>
+                <!-- Content Editor -->
+                <div class="w-2/3 flex flex-col bg-white relative">
+                    <div id="cmsContentArea" class="flex-1 overflow-y-auto p-6 hidden">
+                        <div class="flex justify-between items-start mb-6 border-b border-slate-100 pb-4">
+                            <div class="flex-1 mr-4">
+                                <label class="text-[10px] font-bold uppercase text-slate-400">Tajuk Topik</label>
+                                <input id="editTopicTitle" type="text" class="w-full text-lg font-bold border-b border-slate-300 focus:border-blue-500 outline-none pb-1 placeholder-slate-300">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-bold uppercase text-slate-400">Ikon (FontAwesome)</label>
+                                <input id="editTopicIcon" type="text" class="w-32 text-sm border-b border-slate-300 focus:border-blue-500 outline-none pb-1 font-mono text-slate-500 placeholder-slate-300">
+                            </div>
+                        </div>
+                        <div class="mb-4 flex justify-between items-center">
+                            <h4 class="font-bold text-slate-700 text-sm">Bahan Pembelajaran</h4>
+                            <button onclick="addMaterialInput()" class="text-xs bg-green-50 text-green-600 px-3 py-1 rounded hover:bg-green-100 font-bold border border-green-200">
+                                <i class="fas fa-plus mr-1"></i> Tambah Bahan
+                            </button>
+                        </div>
+                        <div id="cmsMaterialsList" class="space-y-3 pb-10"></div>
+                        
+                        <div class="mt-8 pt-4 border-t border-slate-100 flex justify-between">
+                            <button onclick="deleteCurrentTopic()" class="text-red-500 text-xs font-bold hover:underline flex items-center gap-1">
+                                <i class="fas fa-trash"></i> Padam Topik Ini
+                            </button>
+                        </div>
+                    </div>
+                    <div id="cmsEmptyState" class="flex-1 flex flex-col items-center justify-center text-slate-400 p-10 text-center">
+                        <i class="fas fa-arrow-left text-3xl mb-3 opacity-50"></i>
+                        <p>Pilih topik di sebelah kiri untuk mula mengedit.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 text-right">
+                <button onclick="saveCMS()" class="bg-green-600 hover:bg-green-700 text-white px-8 py-2 rounded-lg font-bold text-sm shadow-sm transition">
+                    <i class="fas fa-save mr-2"></i> Simpan Semua Perubahan
+                </button>
+            </div>
         </div>
     </div>
 
@@ -117,7 +212,7 @@
                 </button>
             </div>
 
-            <!-- VIEW: DASHBOARD STATS (UPDATED) -->
+            <!-- VIEW: DASHBOARD STATS -->
             <div id="view-dashboard" class="view-section flex-1 p-8 overflow-y-auto">
                 <!-- STAT CARDS -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -172,14 +267,20 @@
                 </div>
             </div>
 
-            <!-- VIEW: BUILDER (SAME) -->
+            <!-- VIEW: BUILDER -->
             <div id="view-builder" class="view-section hidden flex-1 flex flex-col p-4 h-full">
-                <!-- (Kod Builder Kekal Sama - Diringkaskan untuk jimat ruang) -->
                 <div class="flex-1 bg-white rounded-xl border flex overflow-hidden">
-                     <div class="w-1/2 bg-[#1e1e1e] flex flex-col border-r border-slate-700">
-                        <div class="bg-[#252526] text-gray-400 px-4 py-2 text-xs flex justify-between h-12 items-center">
-                            <span class="font-bold">HTML/React Editor</span>
-                            <button onclick="resetBuilder()" class="hover:text-white"><i class="fas fa-eraser"></i> Reset</button>
+                     <!-- Editor Column -->
+                     <div class="w-1/2 bg-[#1e1e1e] flex flex-col border-r border-slate-700 transition-colors" id="editorContainer">
+                        <div class="bg-[#252526] text-gray-400 px-4 py-2 text-xs flex justify-between items-center h-12 border-b border-[#333]">
+                            <div class="flex items-center gap-3">
+                                <span class="font-bold text-slate-300">Mode:</span>
+                                <!-- Auto Detect Badge -->
+                                <button onclick="toggleModeManual()" id="modeBadge" class="bg-[#333] text-gray-300 border border-[#444] rounded px-3 py-1 text-xs font-mono transition-colors font-bold shadow-sm hover:bg-[#444]" title="Klik untuk tukar mode secara manual">
+                                    <i class="fas fa-magic mr-1"></i> Auto-Detecting...
+                                </button>
+                            </div>
+                            <button onclick="resetBuilder()" class="hover:text-white flex items-center gap-1 transition text-slate-400"><i class="fas fa-eraser"></i> Reset</button>
                         </div>
                         <textarea id="htmlEditor" class="flex-1 bg-transparent text-gray-300 p-4 font-mono text-sm resize-none outline-none" spellcheck="false"></textarea>
                      </div>
@@ -193,15 +294,67 @@
                 </div>
             </div>
 
-            <!-- VIEW: APP LIST (UPDATED WITH STATUS BADGE) -->
+            <!-- VIEW: APP LIST -->
             <div id="view-list" class="view-section hidden flex-1 overflow-y-auto p-8">
                 <div id="appListContainer" class="grid grid-cols-1 lg:grid-cols-2 gap-4"></div>
             </div>
 
-            <!-- VIEW: USERS & LEARNING & TEMPLATES (KEKAL SAMA - PLACEHOLDERS) -->
-            <div id="view-users" class="view-section hidden flex-1 p-8"><div id="userListBody"></div></div>
-            <div id="view-templates" class="view-section hidden flex-1 p-8"><div id="templatesGrid"></div></div>
-            <div id="view-learn" class="view-section hidden flex-1 p-8"><div id="topicGrid"></div></div>
+            <!-- VIEW: TEMPLATES -->
+            <div id="view-templates" class="view-section hidden flex-1 overflow-y-auto p-8 relative">
+                <button id="btnAddTemplate" onclick="toggleTemplateCMS(true)" class="hidden absolute top-6 right-8 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg hover:bg-blue-700 transition z-20 flex items-center gap-2"><i class="fas fa-plus"></i> Tambah Template</button>
+                <div class="flex items-center gap-4 mb-8">
+                    <div class="p-4 bg-purple-100 text-purple-700 rounded-xl shadow-sm"><i class="fas fa-swatchbook text-2xl"></i></div>
+                    <div><h2 class="text-2xl font-bold text-slate-800">Koleksi Template</h2><p class="text-sm text-slate-500">Pilih reka bentuk siap untuk mula membina.</p></div>
+                </div>
+                <div id="templatesGrid" class="grid grid-cols-1 md:grid-cols-3 gap-6 pb-10"></div>
+            </div>
+
+            <!-- VIEW: USERS (UPDATED WITH EXPIRY DATE) -->
+            <div id="view-users" class="view-section hidden flex-1 overflow-y-auto p-8">
+                <div class="max-w-4xl">
+                    <h3 class="font-bold text-lg text-purple-800 mb-4 flex items-center gap-2"><i class="fas fa-users-cog"></i> Pengurusan Pengguna</h3>
+                    <div class="flex flex-wrap gap-2 mb-6 bg-white p-4 rounded-xl border border-purple-100 shadow-sm items-end">
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="text-xs text-slate-500 font-bold">Email</label>
+                            <input id="newEmail" placeholder="user@gmail.com" class="w-full border border-slate-300 px-4 py-2 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 text-sm">
+                        </div>
+                        <div class="w-32">
+                            <label class="text-xs text-slate-500 font-bold">Role</label>
+                            <select id="newRole" class="w-full border border-slate-300 px-4 py-2 rounded-lg bg-slate-50 font-medium text-slate-700 outline-none text-sm"><option value="user">User</option><option value="admin">Admin</option></select>
+                        </div>
+                        <div class="w-40">
+                             <label class="text-xs text-slate-500 font-bold">Tamat Akses</label>
+                             <input type="date" id="newExpiry" class="w-full border border-slate-300 px-4 py-2 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 text-sm text-slate-600">
+                        </div>
+                        <button onclick="modifyUser('add')" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-bold transition shadow-sm h-[38px] text-sm">Tambah</button>
+                    </div>
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden"><div id="userListBody" class="divide-y divide-slate-100"></div></div>
+                </div>
+            </div>
+
+            <!-- VIEW: LEARNING HUB -->
+            <div id="view-learn" class="view-section hidden flex-1 flex flex-col h-full relative">
+                <button id="btnEditContent" onclick="toggleCMS(true)" class="hidden absolute top-6 right-8 bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg hover:bg-black transition z-20 flex items-center gap-2"><i class="fas fa-edit"></i> Edit Pustaka</button>
+                <div id="learnGridLevel" class="flex-1 overflow-y-auto p-8">
+                    <div class="flex items-center gap-4 mb-8"><div class="p-4 bg-green-100 text-green-700 rounded-xl shadow-sm"><i class="fas fa-graduation-cap text-2xl"></i></div><div><h2 class="text-2xl font-bold text-slate-800">Pustaka Pembelajaran</h2><p class="text-sm text-slate-500">Tutorial dan panduan penggunaan sistem.</p></div></div>
+                    <div id="topicGrid" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6 pb-10"></div>
+                </div>
+                <div id="learnDetailLevel" class="hidden flex-1 overflow-y-auto p-8 bg-white">
+                    <button onclick="backToGrid()" class="mb-6 text-slate-500 hover:text-blue-600 text-sm font-bold flex items-center gap-2 transition px-3 py-2 rounded-lg hover:bg-slate-50 inline-flex"><i class="fas fa-arrow-left"></i> Kembali ke Menu</button>
+                    <div class="max-w-4xl mx-auto pb-20">
+                        <div class="flex items-center gap-5 mb-8 pb-6 border-b border-slate-100">
+                            <div id="detailIcon" class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-3xl shadow-sm border border-blue-100"><i class="fas fa-book"></i></div>
+                            <div><h2 id="detailTitle" class="text-3xl font-bold text-slate-800 mb-1">Tajuk Topik</h2><p class="text-slate-500">Senarai bahan pembelajaran untuk topik ini.</p></div>
+                        </div>
+                        <div id="activeVideoSection" class="hidden mb-10 bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                            <div class="video-wrapper shadow-lg mb-4 rounded-xl border-4 border-white"><iframe id="mainVideoPlayer" src="" frameborder="0" allowfullscreen></iframe></div>
+                            <h3 id="activeVideoTitle" class="font-bold text-xl text-slate-800 flex items-center gap-2"><i class="fab fa-youtube text-red-600"></i> <span id="vTitleText">Judul Video</span></h3>
+                        </div>
+                        <h3 class="font-bold text-slate-700 mb-4 flex items-center gap-2 text-lg"><i class="fas fa-layer-group text-blue-500"></i> Bahan & Sumber</h3>
+                        <div id="detailMaterials" class="grid gap-3"></div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -213,9 +366,8 @@
         const auth = firebase.auth();
         const provider = new firebase.auth.GoogleAuthProvider();
         let currentUser = null, currentRole = null;
-        let userAppsData = []; // Simpan data apps user lokal
+        let userAppsData = [];
 
-        // AUTH LOGIC
         auth.onAuthStateChanged(async (user) => {
             if (user) {
                 try {
@@ -237,172 +389,82 @@
             document.getElementById('userName').innerText = user.displayName;
             document.getElementById('userPhoto').src = user.photoURL;
             document.getElementById('userRoleBadge').innerText = role.toUpperCase();
-            if(role === 'admin') document.getElementById('adminMenu').classList.remove('hidden');
+            if(role === 'admin') {
+                document.getElementById('adminMenu').classList.remove('hidden');
+                document.getElementById('btnEditContent').classList.remove('hidden');
+                document.getElementById('btnAddTemplate').classList.remove('hidden');
+            }
             reloadData();
         }
 
         // --- STATS & CHARTS ---
-        let statusChartInstance = null;
-        let viewsChartInstance = null;
-
+        let statusChartInstance = null; let viewsChartInstance = null;
         async function loadStats() {
             try {
                 let stats = { total: 0, active: 0, pending: 0, rejected: 0, totalViews: 0, topApps: [] };
-
                 if (currentRole === 'admin') {
-                    // --- ADMIN: FETCH GLOBAL STATS DARI WORKER ---
                     const res = await fetch(`${WORKER_URL}/api/stats`);
                     stats = await res.json();
                 } else {
-                    // --- USER: KIRA DARI LIST APP SENDIRI ---
                     if (userAppsData.length > 0) {
                         stats.total = userAppsData.length;
                         stats.active = userAppsData.filter(a => a.status === 'active').length;
                         stats.pending = userAppsData.filter(a => a.status === 'pending').length;
                         stats.rejected = userAppsData.filter(a => a.status === 'rejected').length;
                         stats.totalViews = userAppsData.reduce((sum, app) => sum + (app.views || 0), 0);
-                        
-                        // Top 5 User Apps
-                        stats.topApps = [...userAppsData]
-                            .sort((a, b) => (b.views || 0) - (a.views || 0))
-                            .slice(0, 5)
-                            .map(a => ({ name: a.subdomain, views: a.views || 0 }));
+                        stats.topApps = [...userAppsData].sort((a, b) => (b.views || 0) - (a.views || 0)).slice(0, 5).map(a => ({ name: a.subdomain, views: a.views || 0 }));
                     }
                 }
-                
-                // Update Cards
                 document.getElementById('statTotal').innerText = stats.total;
                 document.getElementById('statActive').innerText = stats.active;
                 document.getElementById('statPending').innerText = stats.pending;
                 document.getElementById('statViews').innerText = stats.totalViews;
+                document.getElementById('topAppsTitle').innerText = currentRole === 'admin' ? "Aplikasi Paling Popular (Global)" : "Aplikasi Paling Popular (Anda)";
 
-                // Update Chart Label Title
-                const chartTitle = currentRole === 'admin' ? "Aplikasi Paling Popular (Global)" : "Aplikasi Paling Popular (Anda)";
-                document.getElementById('topAppsTitle').innerText = chartTitle;
-
-                // Render Chart: Status
                 const ctxStatus = document.getElementById('statusChart').getContext('2d');
                 if(statusChartInstance) statusChartInstance.destroy();
-                statusChartInstance = new Chart(ctxStatus, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Active', 'Pending', 'Rejected'],
-                        datasets: [{
-                            data: [stats.active, stats.pending, stats.rejected || 0],
-                            backgroundColor: ['#22c55e', '#f97316', '#ef4444']
-                        }]
-                    }
-                });
+                statusChartInstance = new Chart(ctxStatus, { type: 'doughnut', data: { labels: ['Active', 'Pending', 'Rejected'], datasets: [{ data: [stats.active, stats.pending, stats.rejected || 0], backgroundColor: ['#22c55e', '#f97316', '#ef4444'] }] } });
 
-                // Render Chart: Top Apps
                 const ctxViews = document.getElementById('viewsChart').getContext('2d');
                 if(viewsChartInstance) viewsChartInstance.destroy();
-                viewsChartInstance = new Chart(ctxViews, {
-                    type: 'bar',
-                    data: {
-                        labels: stats.topApps.map(a => a.name),
-                        datasets: [{
-                            label: 'Jumlah Pelawat',
-                            data: stats.topApps.map(a => a.views),
-                            backgroundColor: '#3b82f6'
-                        }]
-                    },
-                    options: { scales: { y: { beginAtZero: true } } }
-                });
-
+                viewsChartInstance = new Chart(ctxViews, { type: 'bar', data: { labels: stats.topApps.map(a => a.name), datasets: [{ label: 'Jumlah Pelawat', data: stats.topApps.map(a => a.views), backgroundColor: '#3b82f6' }] }, options: { scales: { y: { beginAtZero: true } } } });
             } catch(e) { console.error("Stats Error", e); }
         }
 
-        // --- APPROVALS LOGIC (ADMIN) ---
+        // --- APPROVALS ---
         async function loadApprovals() {
             if(currentRole !== 'admin') return;
             const res = await fetch(`${WORKER_URL}/api/list?filter=pending&email=${currentUser.email}`);
             const apps = await res.json();
-            
-            // Update Sidebar Badge
             const badge = document.getElementById('pendingBadge');
-            if(apps.length > 0) { badge.innerText = apps.length; badge.classList.remove('hidden'); } 
-            else badge.classList.add('hidden');
-
-            // Render Table
+            if(apps.length > 0) { badge.innerText = apps.length; badge.classList.remove('hidden'); } else badge.classList.add('hidden');
             const tbody = document.getElementById('approvalListBody');
             if(apps.length === 0) { tbody.innerHTML = '<tr><td colspan="4" class="p-6 text-center text-slate-400">Tiada permohonan pending.</td></tr>'; return; }
-            
-            tbody.innerHTML = apps.map(app => `
-                <tr class="border-b hover:bg-slate-50">
-                    <td class="px-6 py-4 font-bold text-blue-700">${app.subdomain}</td>
-                    <td class="px-6 py-4 text-xs text-slate-500">${app.owner}</td>
-                    <td class="px-6 py-4 text-xs text-slate-400">${new Date(app.created).toLocaleDateString()}</td>
-                    <td class="px-6 py-4 text-right">
-                        <button onclick="previewApp('${app.subdomain}')" class="text-blue-600 hover:underline text-xs mr-3">Preview</button>
-                        <button onclick="decideApp('${app.subdomain}', 'active')" class="bg-green-100 text-green-700 px-3 py-1 rounded text-xs font-bold hover:bg-green-200">Approve</button>
-                        <button onclick="decideApp('${app.subdomain}', 'rejected')" class="bg-red-100 text-red-700 px-3 py-1 rounded text-xs font-bold hover:bg-red-200 ml-1">Reject</button>
-                    </td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = apps.map(app => `<tr class="border-b hover:bg-slate-50"><td class="px-6 py-4 font-bold text-blue-700">${app.subdomain}</td><td class="px-6 py-4 text-xs text-slate-500">${app.owner}</td><td class="px-6 py-4 text-xs text-slate-400">${new Date(app.created).toLocaleDateString()}</td><td class="px-6 py-4 text-right"><button onclick="previewApp('${app.subdomain}')" class="text-blue-600 hover:underline text-xs mr-3">Preview</button><button onclick="decideApp('${app.subdomain}', 'active')" class="bg-green-100 text-green-700 px-3 py-1 rounded text-xs font-bold hover:bg-green-200">Approve</button><button onclick="decideApp('${app.subdomain}', 'rejected')" class="bg-red-100 text-red-700 px-3 py-1 rounded text-xs font-bold hover:bg-red-200 ml-1">Reject</button></td></tr>`).join('');
         }
-
         async function decideApp(subdomain, status) {
-            const reason = status === 'rejected' ? prompt("Sebab penolakan?") : "";
-            if(status === 'rejected' && !reason) return;
-
-            showLoading();
-            try {
-                await fetch(`${WORKER_URL}/api/approve`, {
-                    method: 'POST',
-                    body: JSON.stringify({ adminEmail: currentUser.email, subdomain, status, rejectReason: reason })
-                });
-                
-                // --- FIX DELAY ---
-                // Tunggu 1 saat untuk KV Cloudflare update status di server sebelum refresh list
-                await new Promise(r => setTimeout(r, 1000));
-                
-                await reloadData();
-            } finally { hideLoading(); }
+            const reason = status === 'rejected' ? prompt("Sebab penolakan?") : ""; if(status === 'rejected' && !reason) return;
+            showLoading(); try { await fetch(`${WORKER_URL}/api/approve`, { method: 'POST', body: JSON.stringify({ adminEmail: currentUser.email, subdomain, status, rejectReason: reason }) }); await new Promise(r => setTimeout(r, 1000)); await reloadData(); } finally { hideLoading(); }
         }
-
         async function previewApp(subdomain) {
-            const res = await fetch(`${WORKER_URL}/api/get?sub=${subdomain}`);
-            const data = await res.json();
-            const blob = new Blob([data.html], {type: 'text/html'});
-            document.getElementById('previewContentFrame').src = URL.createObjectURL(blob);
-            document.getElementById('previewModal').classList.remove('hidden');
+            const res = await fetch(`${WORKER_URL}/api/get?sub=${subdomain}`); const data = await res.json();
+            const blob = new Blob([data.html], {type: 'text/html'}); document.getElementById('previewContentFrame').src = URL.createObjectURL(blob); document.getElementById('previewModal').classList.remove('hidden');
         }
         function closePreview() { document.getElementById('previewModal').classList.add('hidden'); }
 
-        // --- APP LIST (USER VIEW) ---
+        // --- APPS LIST ---
         async function fetchApps() {
             try {
                 const res = await fetch(`${WORKER_URL}/api/list?email=${currentUser.email}`);
                 const apps = await res.json();
-                userAppsData = apps; // SIMPAN DATA LOKAL UNTUK STATS USER
-                
+                userAppsData = apps; 
                 const container = document.getElementById('appListContainer');
                 if(apps.length === 0) return container.innerHTML = `<div class="col-span-2 text-center py-10 text-slate-400">Tiada apps.</div>`;
-                
                 container.innerHTML = apps.map(app => {
-                    // Status Badge Logic
-                    let badgeClass = "bg-green-100 text-green-700";
-                    let statusText = "ACTIVE";
+                    let badgeClass = "bg-green-100 text-green-700", statusText = "ACTIVE";
                     if(app.status === 'pending') { badgeClass = "bg-orange-100 text-orange-700 animate-pulse"; statusText = "PENDING REVIEW"; }
                     if(app.status === 'rejected') { badgeClass = "bg-red-100 text-red-700"; statusText = "REJECTED"; }
-
-                    return `
-                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
-                        <div class="flex justify-between items-start mb-2">
-                            <div class="font-bold text-lg text-slate-800">${app.subdomain}</div>
-                            <span class="text-[10px] font-bold px-2 py-1 rounded ${badgeClass}">${statusText}</span>
-                        </div>
-                        <div class="text-xs text-slate-500 mb-3 flex items-center gap-4">
-                            <span><i class="fas fa-eye text-blue-400"></i> ${app.views || 0} Views</span>
-                            <a href="${app.url}" target="_blank" class="hover:text-blue-600 truncate">${app.url}</a>
-                        </div>
-                        ${app.rejectReason ? `<div class="text-xs text-red-500 bg-red-50 p-2 rounded mb-3">Sebab: ${app.rejectReason}</div>` : ''}
-                        <div class="flex gap-2 border-t pt-3">
-                            <button onclick="editApp('${app.subdomain}')" class="flex-1 bg-slate-50 hover:bg-slate-100 py-1.5 rounded text-xs font-bold text-slate-600">Edit</button>
-                            <button onclick="deleteApp('${app.subdomain}')" class="px-3 text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button>
-                        </div>
-                    </div>`;
+                    return `<div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm"><div class="flex justify-between items-start mb-2"><div class="font-bold text-lg text-slate-800">${app.subdomain}</div><span class="text-[10px] font-bold px-2 py-1 rounded ${badgeClass}">${statusText}</span></div><div class="text-xs text-slate-500 mb-3 flex items-center gap-4"><span><i class="fas fa-eye text-blue-400"></i> ${app.views || 0} Views</span><a href="${app.url}" target="_blank" class="hover:text-blue-600 truncate">${app.url}</a></div>${app.rejectReason ? `<div class="text-xs text-red-500 bg-red-50 p-2 rounded mb-3">Sebab: ${app.rejectReason}</div>` : ''}<div class="flex gap-2 border-t pt-3"><button onclick="editApp('${app.subdomain}')" class="flex-1 bg-slate-50 hover:bg-slate-100 py-1.5 rounded text-xs font-bold text-slate-600">Edit</button><button onclick="deleteApp('${app.subdomain}')" class="px-3 text-red-400 hover:text-red-600"><i class="fas fa-trash"></i></button></div></div>`;
                 }).join('');
             } catch (e) { console.error("Fetch Apps Error", e); }
         }
@@ -410,68 +472,44 @@
         // --- CORE UTILS ---
         function showLoading() { document.getElementById('globalLoader').classList.remove('hidden'); }
         function hideLoading() { document.getElementById('globalLoader').classList.add('hidden'); }
-        
         async function reloadData() {
-            const btn = document.getElementById('globalRefreshBtn');
-            btn.innerHTML = `<i class="fas fa-spinner fa-spin-fast text-blue-600"></i>`;
-            try {
-                // PENTING: Tunggu fetchApps dulu sebab loadStats perlukan userAppsData (untuk User)
-                await fetchApps(); 
-                await loadStats();
-                if(currentRole === 'admin') {
-                    await loadApprovals();
-                    await fetchUsers(); // Fix: Panggil senarai user untuk admin
-                }
-            } catch(e) { console.error(e); }
-            finally { btn.innerHTML = `<i class="fas fa-sync-alt"></i> Refresh`; }
+            const btn = document.getElementById('globalRefreshBtn'); btn.innerHTML = `<i class="fas fa-spinner fa-spin-fast text-blue-600"></i>`;
+            try { await Promise.all([fetchApps(), loadStats(), loadLearning()]); if(currentRole === 'admin') { await loadApprovals(); await fetchUsers(); } } catch(e) { console.error(e); } finally { btn.innerHTML = `<i class="fas fa-sync-alt"></i> Refresh`; }
         }
-
-        // --- PUBLISH & DELETE (Basic) ---
         async function publishApp() {
-            const sub = document.getElementById('subInput').value;
-            const html = document.getElementById('htmlEditor').value;
-            if(!sub) return alert("Sila isi subdomain");
-            showLoading();
-            try {
-                const res = await fetch(`${WORKER_URL}/api/save`, { method: 'POST', body: JSON.stringify({ subdomain: sub, html: html, ownerEmail: currentUser.email }) });
-                const data = await res.json();
-                if(data.success) { 
-                    alert(data.status === 'pending' ? "Berjaya! Site anda kini PENDING untuk kelulusan Admin." : "Berjaya! Site anda kini ACTIVE.");
-                    await reloadData(); switchView('list');
-                } else alert("Error: " + data.error);
-            } finally { hideLoading(); }
+            const sub = document.getElementById('subInput').value; let htmlContent = editor.value; if(!sub) return alert("Sila isi subdomain");
+            if (CURRENT_MODE === 'react') htmlContent = getReactWrapper(htmlContent);
+            showLoading(); try { const res = await fetch(`${WORKER_URL}/api/save`, { method: 'POST', body: JSON.stringify({ subdomain: sub, html: htmlContent, ownerEmail: currentUser.email }) }); const data = await res.json(); if(data.success) { alert(data.status === 'pending' ? "Berjaya! Site anda kini PENDING untuk kelulusan Admin." : "Berjaya! Site anda kini ACTIVE."); await reloadData(); switchView('list'); } else alert("Error: " + data.error); } finally { hideLoading(); }
         }
-
         async function deleteApp(sub) { if(confirm("Padam?")) { showLoading(); await fetch(`${WORKER_URL}/api/delete`, { method:'DELETE', body:JSON.stringify({subdomain:sub, requestorEmail:currentUser.email})}); reloadData(); hideLoading(); } }
-        
         async function editApp(sub) {
-            showLoading();
-            const res = await fetch(`${WORKER_URL}/api/get?sub=${sub}`);
-            const data = await res.json();
-            document.getElementById('htmlEditor').value = data.html;
-            document.getElementById('subInput').value = sub;
-            switchView('builder');
-            hideLoading();
+            showLoading(); const res = await fetch(`${WORKER_URL}/api/get?sub=${sub}`); const data = await res.json();
+            let rawCode = data.html, isReactDetected = false;
+            if (data.html.includes('type="text/babel"')) {
+                const scriptMatch = data.html.match(/<script type="text\/babel">([\s\S]*?)<\/script>/);
+                if (scriptMatch) { let c = scriptMatch[1]; c = c.replace(/const \{ useState.*\} = React;/, '').replace(/\/\/ Mocks for Lucide Icons[\s\S]*?\/\/ User Code/, '').replace(/\/\/ Mounting[\s\S]*/, '').replace(/window\.onerror[\s\S]*?try \{/, '').replace(/\} catch \(err\)[\s\S]*/, ''); rawCode = c.trim(); isReactDetected = true; }
+            }
+            editor.value = rawCode; updateModeUI(isReactDetected ? 'react' : 'html'); updatePreview(true);
+            document.getElementById('subInput').value = sub; document.getElementById('subInput').disabled = true; document.getElementById('subInput').classList.add('bg-slate-100'); document.getElementById('btnPublish').innerText = "Update Site"; document.getElementById('btnPublish').classList.replace('bg-blue-600', 'bg-green-600'); switchView('builder'); hideLoading();
         }
+        function switchView(id) { document.querySelectorAll('.view-section').forEach(e => e.classList.add('hidden')); document.getElementById('view-'+id).classList.remove('hidden'); document.querySelectorAll('.sidebar-link').forEach(e => e.classList.remove('active')); document.getElementById('nav-'+id).classList.add('active'); if(['dashboard','list','approvals','users','learn','templates'].includes(id)) reloadData(); }
 
-        function switchView(id) {
-            document.querySelectorAll('.view-section').forEach(e => e.classList.add('hidden'));
-            document.getElementById('view-'+id).classList.remove('hidden');
-            document.querySelectorAll('.sidebar-link').forEach(e => e.classList.remove('active'));
-            document.getElementById('nav-'+id).classList.add('active');
-            if(['dashboard','list','approvals','users'].includes(id)) reloadData();
-        }
-        
-        // --- FETCH USERS LOGIC (RESTORED) ---
+        // --- FETCH USERS LOGIC ---
         async function fetchUsers() {
             try {
                 const res = await fetch(`${WORKER_URL}/api/users?email=${currentUser.email}`);
                 const users = await res.json();
-                document.getElementById('userListBody').innerHTML = Object.entries(users).map(([email, role]) => `
-                    <div class="p-4 border-b border-slate-50 flex justify-between items-center hover:bg-slate-50">
-                        <div><div class="font-bold text-sm text-slate-700">${email}</div><span class="text-[10px] bg-slate-200 px-2 py-0.5 rounded-full uppercase font-bold text-slate-600">${role}</span></div>
-                        ${email !== currentUser.email ? `<button onclick="modifyUser('delete', '${email}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg"><i class="fas fa-trash-alt"></i></button>` : ''}
-                    </div>`).join('');
+                document.getElementById('userListBody').innerHTML = Object.entries(users).map(([email, userData]) => {
+                    const role = (typeof userData === 'object') ? userData.role : userData;
+                    const expiry = (typeof userData === 'object' && userData.expiryDate) ? userData.expiryDate : null;
+                    let expiryBadge = "";
+                    if(expiry) {
+                        const daysLeft = Math.ceil((new Date(expiry) - new Date()) / (1000 * 60 * 60 * 24));
+                        if(daysLeft < 0) expiryBadge = `<span class="text-red-500 text-[10px] font-bold border border-red-200 px-1 rounded bg-red-50">EXPIRED</span>`;
+                        else expiryBadge = `<span class="text-slate-400 text-[10px]"><i class="far fa-clock"></i> ${expiry} (${daysLeft} hari)</span>`;
+                    }
+                    return `<div class="p-4 border-b border-slate-50 flex justify-between items-center hover:bg-slate-50"><div><div class="font-bold text-sm text-slate-700 flex items-center gap-2">${email} ${expiryBadge}</div><span class="text-[10px] bg-slate-200 px-2 py-0.5 rounded-full uppercase font-bold text-slate-600">${role}</span></div>${email !== currentUser.email ? `<button onclick="modifyUser('delete', '${email}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg"><i class="fas fa-trash-alt"></i></button>` : ''}</div>`
+                }).join('');
             } catch(e) { console.error(e); }
         }
 
@@ -480,18 +518,121 @@
             try {
                 const email = targetEmail || document.getElementById('newEmail').value;
                 const role = document.getElementById('newRole').value;
-                await fetch(`${WORKER_URL}/api/users`, { method: 'POST', body: JSON.stringify({ adminEmail: currentUser.email, action, targetEmail: email, targetRole: role }) });
-                document.getElementById('newEmail').value = ""; await fetchUsers();
+                const expiry = document.getElementById('newExpiry').value;
+                
+                await fetch(`${WORKER_URL}/api/users`, { 
+                    method: 'POST', 
+                    body: JSON.stringify({ adminEmail: currentUser.email, action, targetEmail: email, targetRole: role, expiryDate: expiry }) 
+                });
+                document.getElementById('newEmail').value = ""; document.getElementById('newExpiry').value = "";
+                await fetchUsers();
             } catch(e) { alert("Gagal update user"); } finally { hideLoading(); }
         }
 
-        // Init Editor
+        // --- LEARNING & TEMPLATES LOGIC ---
+        let learningData = { topics: [], templates: [] }; let currentEditingTopicId = null;
+        async function loadLearning() {
+            try {
+                const res = await fetch(`${WORKER_URL}/api/learning`); const data = await res.json();
+                learningData = data.topics ? data : { topics: [], templates: [] };
+                if(!learningData.templates) learningData.templates = [];
+                renderGrid(); renderTemplates();
+            } catch(e) { console.error("Learning Data Error", e); }
+        }
+        function renderTemplates() {
+            const grid = document.getElementById('templatesGrid');
+            if(learningData.templates.length === 0) return grid.innerHTML = `<div class="col-span-3 text-center text-slate-400 py-10 border-2 border-dashed rounded-xl bg-slate-50">Tiada template.</div>`;
+            grid.innerHTML = learningData.templates.map(t => `<div class="bg-white rounded-xl shadow-sm border overflow-hidden hover:shadow-md transition flex flex-col group"><div class="h-32 bg-slate-100 flex items-center justify-center relative"><i class="fas fa-layer-group text-4xl text-slate-300"></i><button onclick="openTemplate('${t.id}')" class="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/10 transition opacity-0 group-hover:opacity-100"><span class="bg-white px-4 py-2 rounded-full text-xs font-bold shadow">Preview</span></button></div><div class="p-5 flex-1 flex flex-col"><h4 class="font-bold text-slate-800">${t.title}</h4><p class="text-xs text-slate-500 mb-4">${t.desc||''}</p><div class="mt-auto flex gap-2"><button onclick="openTemplate('${t.id}')" class="flex-1 bg-blue-50 text-blue-600 py-2 rounded-lg text-xs font-bold">Code</button>${currentRole==='admin'?`<button onclick="deleteTemplate('${t.id}')" class="px-3 bg-red-50 text-red-500 rounded"><i class="fas fa-trash"></i></button>`:''}</div></div></div>`).join('');
+        }
+        function renderGrid() {
+            const grid = document.getElementById('topicGrid');
+            if(learningData.topics.length === 0) return grid.innerHTML = `<div class="col-span-4 text-center text-slate-400 py-10 border-2 border-dashed rounded-xl">Tiada topik.</div>`;
+            grid.innerHTML = learningData.topics.map(t => `<div onclick="openTopic('${t.id}')" class="bg-white p-6 rounded-xl border hover:shadow-md cursor-pointer group"><div class="w-12 h-12 bg-blue-50 text-blue-600 rounded-lg flex items-center justify-center mb-4 text-2xl"><i class="fas ${t.icon||'fa-book'}"></i></div><h3 class="font-bold text-lg group-hover:text-blue-700">${t.title}</h3><p class="text-xs text-slate-500">${(t.materials||[]).length} Bahan</p></div>`).join('');
+        }
+        function toggleCMS(s){ const m=document.getElementById('cmsModal'); if(s){ renderCMSTopicList(); document.getElementById('cmsContentArea').classList.add('hidden'); document.getElementById('cmsEmptyState').classList.remove('hidden'); m.classList.remove('hidden'); } else m.classList.add('hidden'); }
+        function toggleTemplateCMS(s){ const m=document.getElementById('cmsTemplateModal'); if(s){ document.getElementById('newTempTitle').value=""; document.getElementById('newTempCode').value="<!DOCTYPE html>"; m.classList.remove('hidden'); } else m.classList.add('hidden'); }
+        function renderCMSTopicList(){ document.getElementById('cmsTopicList').innerHTML = learningData.topics.map(t => `<div onclick="editCMSTopic('${t.id}')" class="p-3 rounded cursor-pointer hover:bg-blue-50 flex justify-between ${currentEditingTopicId === t.id ? 'bg-blue-100' : 'bg-white'} mb-2"><span class="truncate text-sm font-bold">${t.title}</span><i class="fas fa-chevron-right text-xs"></i></div>`).join(''); }
+        function addNewTopic(){ const id='t_'+Date.now(); learningData.topics.push({id, title:'Topik Baru', icon:'fa-book', materials:[]}); renderCMSTopicList(); editCMSTopic(id); }
+        window.editCMSTopic=(id)=>{ currentEditingTopicId=id; const t=learningData.topics.find(x=>x.id===id); document.getElementById('cmsEmptyState').classList.add('hidden'); document.getElementById('cmsContentArea').classList.remove('hidden'); document.getElementById('editTopicTitle').value=t.title; document.getElementById('editTopicIcon').value=t.icon; document.getElementById('cmsMaterialsList').innerHTML=''; (t.materials||[]).forEach(m=>addMaterialInput(m)); renderCMSTopicList(); document.getElementById('editTopicTitle').oninput=(e)=>{t.title=e.target.value;renderCMSTopicList()}; document.getElementById('editTopicIcon').oninput=(e)=>{t.icon=e.target.value}; }
+        window.addMaterialInput=(d={type:'YOUTUBE',title:'',url:''})=>{ const div=document.createElement('div'); div.className="bg-slate-50 p-3 rounded border flex gap-2 items-start"; div.innerHTML=`<div class="flex-1 space-y-2"><div class="flex gap-2"><select class="mat-type border rounded text-xs font-bold w-24"><option value="YOUTUBE">VIDEO</option><option value="PDF">PDF</option><option value="DRIVE">DRIVE</option><option value="LINK">LINK</option></select><input class="mat-title flex-1 border rounded text-sm px-2" placeholder="Tajuk" value="${d.title}"></div><input class="mat-url w-full border rounded text-xs px-2" placeholder="URL" value="${d.url}"></div><button onclick="this.parentElement.remove()" class="text-red-500"><i class="fas fa-trash"></i></button>`; document.getElementById('cmsMaterialsList').appendChild(div); div.querySelector('.mat-type').value=d.type; }
+        function deleteCurrentTopic(){ if(confirm('Padam?')){ learningData.topics=learningData.topics.filter(t=>t.id!==currentEditingTopicId); toggleCMS(true); } }
+        async function saveNewTemplate(){ learningData.templates.push({id:'temp_'+Date.now(), title:document.getElementById('newTempTitle').value, desc:document.getElementById('newTempDesc').value, code:document.getElementById('newTempCode').value}); await saveCMS(true); toggleTemplateCMS(false); }
+        async function deleteTemplate(id){ if(confirm('Padam?')){ learningData.templates=learningData.templates.filter(t=>t.id!==id); await saveCMS(true); } }
+        async function saveCMS(isTemplate=false){ if(!isTemplate && currentEditingTopicId){ const t=learningData.topics.find(x=>x.id===currentEditingTopicId); if(t){ const ds=document.querySelectorAll('#cmsMaterialsList > div'); t.materials=Array.from(ds).map(d=>({type:d.querySelector('.mat-type').value, title:d.querySelector('.mat-title').value, url:d.querySelector('.mat-url').value})); } } showLoading(); try{ await fetch(`${WORKER_URL}/api/learning`, {method:'POST', body:JSON.stringify({adminEmail:currentUser.email, data:learningData})}); if(isTemplate) renderTemplates(); else renderGrid(); if(!isTemplate) toggleCMS(false); alert("Disimpan!"); } catch(e){ alert("Error saving"); } finally{ hideLoading(); } }
+        window.openTemplate=(id)=>{ const t=learningData.templates.find(x=>x.id===id); if(t){ document.getElementById('previewTitle').innerText=t.title; document.getElementById('hiddenTemplateCode').value=t.code; const b=new Blob([t.code],{type:'text/html'}); document.getElementById('previewContentFrame').src=URL.createObjectURL(b); document.getElementById('previewModal').classList.remove('hidden'); } };
+        window.closePreview=()=>{document.getElementById('previewModal').classList.add('hidden')};
+        window.copyTemplateCode=()=>{navigator.clipboard.writeText(document.getElementById('hiddenTemplateCode').value).then(()=>alert("Kod disalin!"));};
+        window.openTopic=(id)=>{const t=learningData.topics.find(x=>x.id===id); if(t){ document.getElementById('learnGridLevel').classList.add('hidden'); document.getElementById('learnDetailLevel').classList.remove('hidden'); document.getElementById('detailTitle').innerText=t.title; document.getElementById('detailIcon').innerHTML=`<i class="fas ${t.icon||'fa-book'}"></i>`; document.getElementById('activeVideoSection').classList.add('hidden'); document.getElementById('detailMaterials').innerHTML=(t.materials||[]).map(m=>`<div onclick="${m.type==='YOUTUBE'?`playVideo('${m.url}','${m.title}')`:`window.open('${m.url}')`}" class="flex gap-4 bg-slate-50 p-4 rounded-xl border hover:bg-white cursor-pointer"><div class="w-10 h-10 bg-gray-100 rounded flex items-center justify-center"><i class="fas ${m.type==='YOUTUBE'?'fa-play text-red-500':'fa-link text-blue-500'}"></i></div><div class="flex-1"><div class="font-bold text-slate-700">${m.title}</div><div class="text-[10px] font-bold text-slate-400">${m.type}</div></div></div>`).join(''); }};
+        window.backToGrid=()=>{document.getElementById('learnDetailLevel').classList.add('hidden'); document.getElementById('learnGridLevel').classList.remove('hidden'); document.getElementById('mainVideoPlayer').src="";};
+        window.playVideo=(u,t)=>{let v=u; if(u.includes('v='))v=u.split('v=')[1]; document.getElementById('mainVideoPlayer').src=`https://www.youtube.com/embed/${v}?autoplay=1`; document.getElementById('vTitleText').innerText=t; document.getElementById('activeVideoSection').classList.remove('hidden'); };
+
+        // --- BUILDER (SMART COMPILER) ---
         const editor = document.getElementById('htmlEditor');
-        editor.value = "<h1>Hello!</h1>";
-        editor.addEventListener('input', () => {
-             const blob = new Blob([editor.value], {type:'text/html'});
-             document.getElementById('previewFrame').src = URL.createObjectURL(blob);
-        });
+        const preview = document.getElementById('previewFrame');
+        const modeBadge = document.getElementById('modeBadge');
+        
+        let CURRENT_MODE = 'html'; 
+        const TEMPLATE_HTML = `<!DOCTYPE html>\n<html>\n<head>\n<title>App Saya</title>\n</head>\n<body style="font-family:sans-serif; text-align:center; padding:50px;">\n  <h1 style="color:blue">Hello World</h1>\n  <p>Selamat datang.</p>\n</body>\n</html>`;
+        const TEMPLATE_REACT = `// React Mode\nimport React, { useState } from 'react';\n\nfunction App() {\n  const [count, setCount] = useState(0);\n  return (\n    <div className="flex flex-col items-center justify-center h-screen bg-slate-50 font-sans">\n      <h1 className="text-4xl font-bold text-blue-600 mb-4">Hello React! ⚛️</h1>\n      <button className="bg-blue-600 text-white px-6 py-2 rounded-full hover:bg-blue-700 shadow-lg active:scale-95" onClick={() => setCount(count + 1)}>Klik Saya: {count}</button>\n    </div>\n  );\n}\nexport default App;`;
+
+        function detectMode(code) {
+            const c = code.trim();
+            if (c.startsWith('<!DOCTYPE html>') || c.startsWith('<html')) return 'html';
+            if (c.includes('export default') || c.includes('import React') || c.includes('function App') || c.includes('const App =') || c.includes('className=')) return 'react';
+            return 'html'; 
+        }
+
+        function updateModeUI(mode) {
+            CURRENT_MODE = mode;
+            if(mode === 'react') {
+                modeBadge.innerHTML = '<i class="fab fa-react animate-spin-slow"></i> REACT (JSX)';
+                modeBadge.className = 'bg-blue-900 text-blue-100 border border-blue-700 rounded px-3 py-1 text-xs font-bold font-mono transition-colors shadow-sm cursor-pointer hover:bg-blue-800';
+                editor.parentElement.classList.remove('html-mode');
+                editor.parentElement.classList.add('react-mode');
+            } else {
+                modeBadge.innerHTML = '<i class="fab fa-html5"></i> HTML5';
+                modeBadge.className = 'bg-orange-900 text-orange-100 border border-orange-700 rounded px-3 py-1 text-xs font-bold font-mono transition-colors shadow-sm cursor-pointer hover:bg-orange-800';
+                editor.parentElement.classList.remove('react-mode');
+                editor.parentElement.classList.add('html-mode');
+            }
+        }
+
+        function toggleModeManual() {
+            const newMode = (CURRENT_MODE === 'html') ? 'react' : 'html';
+            updateModeUI(newMode);
+            updatePreview(true); 
+        }
+
+        function getReactWrapper(jsxCode) {
+            const lucideMatch = jsxCode.match(/import\s+\{([\s\S]*?)\}\s+from\s+['"]lucide-react['"]/);
+            let mocks = "";
+            if (lucideMatch) {
+                const icons = lucideMatch[1].split(',').map(i => i.trim().split(' as ')[0]);
+                mocks = icons.map(icon => {
+                    const faClass = { 'Trophy': 'fa-trophy', 'ArrowRight': 'fa-arrow-right', 'RotateCcw': 'fa-redo', 'CheckCircle': 'fa-check-circle', 'XCircle': 'fa-times-circle', 'BookOpen': 'fa-book-open', 'ChevronRight': 'fa-chevron-right', 'HelpCircle': 'fa-question-circle', 'Star': 'fa-star', 'Heart': 'fa-heart', 'User': 'fa-user', 'Settings': 'fa-cog' }[icon] || 'fa-cube';
+                    return `const ${icon} = ({size, className}) => React.createElement('i', { className: \`fas \${'${faClass}'} \${className || ''}\`, style: { fontSize: size ? size : undefined } });`;
+                }).join('\n');
+            }
+            let cleanCode = jsxCode.replace(/import\s+[\s\S]*?from\s+['"].*?['"];?/g, '');
+            cleanCode = cleanCode.replace(/export\s+default\s+function\s+(\w+)/, 'function $1');
+            cleanCode = cleanCode.replace(/export\s+default\s+(\w+)/, ''); 
+            if(!cleanCode.includes('const AppToRender')) cleanCode += `\nconst AppToRender = App;`; 
+
+            return `<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Preview</title><script src="https://unpkg.com/react@18/umd/react.production.min.js"><\/script><script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"><\/script><script src="https://unpkg.com/@babel/standalone/babel.min.js"><\/script><script src="https://cdn.tailwindcss.com"><\/script><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"><style>body { background-color: white; }</style></head><body><div id="root"></div><script type="text/babel">window.onerror = function(message, source, lineno, colno, error) { document.getElementById('root').innerHTML = '<div class="p-4 bg-red-50 text-red-600 font-mono text-sm border-l-4 border-red-500"><strong>Error:</strong> ' + message + '</div>'; }; try { const { useState, useEffect, useRef, useMemo } = React; ${mocks} ${cleanCode} if (typeof AppToRender !== 'undefined') { const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<AppToRender />); } else { console.warn("No 'App' component found."); } } catch (err) { document.getElementById('root').innerHTML = '<div class="p-4 bg-red-50 text-red-600 font-mono text-sm border-l-4 border-red-500"><strong>Render Error:</strong> ' + err.message + '</div>'; }<\/script></body></html>`;
+        }
+
+        editor.addEventListener('input', () => updatePreview(false));
+        function updatePreview(forceMode = false) {
+            const content = editor.value;
+            if (!forceMode) { const detected = detectMode(content); updateModeUI(detected); }
+            let finalContent = content; if (CURRENT_MODE === 'react') finalContent = getReactWrapper(content);
+            const blob = new Blob([finalContent], { type: 'text/html' }); preview.src = URL.createObjectURL(blob);
+        }
+        function resetBuilder() { editor.value = TEMPLATE_HTML; updateModeUI('html'); updatePreview(true); document.getElementById('subInput').value = ""; document.getElementById('subInput').disabled = false; document.getElementById('subInput').classList.remove('bg-slate-100'); document.getElementById('btnPublish').innerText = "Terbitkan"; document.getElementById('btnPublish').classList.replace('bg-green-600', 'bg-blue-600'); }
+
+        // Init Editor
+        editor.value = TEMPLATE_HTML;
+        editor.dispatchEvent(new Event('input'));
     </script>
 </body>
 </html>
