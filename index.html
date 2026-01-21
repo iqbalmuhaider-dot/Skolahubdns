@@ -271,7 +271,7 @@
             <div id="view-builder" class="view-section hidden flex-1 flex flex-col p-4 h-full">
                 <div class="flex-1 bg-white rounded-xl border flex overflow-hidden">
                      <!-- Editor Column -->
-                     <div class="w-1/2 bg-[#1e1e1e] flex flex-col border-r border-slate-700 transition-colors" id="editorContainer">
+                     <div class="w-1/2 bg-[#1e1e1e] flex flex-col border-r border-slate-700 transition-colors relative" id="editorContainer">
                         <div class="bg-[#252526] text-gray-400 px-4 py-2 text-xs flex justify-between items-center h-12 border-b border-[#333]">
                             <div class="flex items-center gap-3">
                                 <span class="font-bold text-slate-300">Mode:</span>
@@ -280,8 +280,27 @@
                                     <i class="fas fa-magic mr-1"></i> Auto-Detecting...
                                 </button>
                             </div>
-                            <button onclick="resetBuilder()" class="hover:text-white flex items-center gap-1 transition text-slate-400"><i class="fas fa-eraser"></i> Reset</button>
+                            <div class="flex items-center gap-2">
+                                <button onclick="toggleHistoryMenu()" class="hover:text-blue-400 text-slate-400 flex items-center gap-1 transition px-2 py-1 hover:bg-[#333] rounded relative">
+                                    <i class="fas fa-history"></i> Sejarah
+                                </button>
+                                <button onclick="resetBuilder()" class="hover:text-red-400 flex items-center gap-1 transition text-slate-400 px-2 py-1 hover:bg-[#333] rounded">
+                                    <i class="fas fa-eraser"></i> Reset
+                                </button>
+                            </div>
                         </div>
+                        
+                        <!-- History Dropdown -->
+                        <div id="historyDropdown" class="hidden absolute top-12 right-2 w-64 bg-white rounded-lg shadow-xl border border-slate-200 z-50 overflow-hidden">
+                            <div class="bg-slate-100 px-3 py-2 border-b text-xs font-bold text-slate-600 flex justify-between items-center">
+                                <span>5 Versi Terakhir (Server)</span>
+                                <button onclick="toggleHistoryMenu()" class="text-slate-400 hover:text-red-500"><i class="fas fa-times"></i></button>
+                            </div>
+                            <div id="historyList" class="max-h-60 overflow-y-auto">
+                                <div class="p-4 text-center text-xs text-slate-400">Tiada sejarah.</div>
+                            </div>
+                        </div>
+
                         <textarea id="htmlEditor" class="flex-1 bg-transparent text-gray-300 p-4 font-mono text-sm resize-none outline-none" spellcheck="false"></textarea>
                      </div>
                      <div class="w-1/2 bg-white flex flex-col">
@@ -367,6 +386,7 @@
         const provider = new firebase.auth.GoogleAuthProvider();
         let currentUser = null, currentRole = null;
         let userAppsData = [];
+        let currentHistoryCache = []; // NEW: Cache for server history
 
         auth.onAuthStateChanged(async (user) => {
             if (user) {
@@ -479,6 +499,12 @@
         async function publishApp() {
             const sub = document.getElementById('subInput').value; let htmlContent = editor.value; if(!sub) return alert("Sila isi subdomain");
             if (CURRENT_MODE === 'react') htmlContent = getReactWrapper(htmlContent);
+            
+            // SAVE TO HISTORY (SERVER) BEFORE PUBLISH
+            // We use fire-and-forget here to avoid slowing down UX, or we can await it.
+            // Awaiting is safer to ensure it's captured.
+            await saveHistoryToServer(sub, editor.value);
+
             showLoading(); try { const res = await fetch(`${WORKER_URL}/api/save`, { method: 'POST', body: JSON.stringify({ subdomain: sub, html: htmlContent, ownerEmail: currentUser.email }) }); const data = await res.json(); if(data.success) { alert(data.status === 'pending' ? "Berjaya! Site anda kini PENDING untuk kelulusan Admin." : "Berjaya! Site anda kini ACTIVE."); await reloadData(); switchView('list'); } else alert("Error: " + data.error); } finally { hideLoading(); }
         }
         async function deleteApp(sub) { if(confirm("Padam?")) { showLoading(); await fetch(`${WORKER_URL}/api/delete`, { method:'DELETE', body:JSON.stringify({subdomain:sub, requestorEmail:currentUser.email})}); reloadData(); hideLoading(); } }
@@ -490,6 +516,10 @@
                 if (scriptMatch) { let c = scriptMatch[1]; c = c.replace(/const \{ useState.*\} = React;/, '').replace(/\/\/ Mocks for Lucide Icons[\s\S]*?\/\/ User Code/, '').replace(/\/\/ Mounting[\s\S]*/, '').replace(/window\.onerror[\s\S]*?try \{/, '').replace(/\} catch \(err\)[\s\S]*/, ''); rawCode = c.trim(); isReactDetected = true; }
             }
             editor.value = rawCode; updateModeUI(isReactDetected ? 'react' : 'html'); updatePreview(true);
+            
+            // Save initial state to history (SERVER) as backup point
+            saveHistoryToServer(sub, rawCode);
+
             document.getElementById('subInput').value = sub; document.getElementById('subInput').disabled = true; document.getElementById('subInput').classList.add('bg-slate-100'); document.getElementById('btnPublish').innerText = "Update Site"; document.getElementById('btnPublish').classList.replace('bg-blue-600', 'bg-green-600'); switchView('builder'); hideLoading();
         }
         function switchView(id) { document.querySelectorAll('.view-section').forEach(e => e.classList.add('hidden')); document.getElementById('view-'+id).classList.remove('hidden'); document.querySelectorAll('.sidebar-link').forEach(e => e.classList.remove('active')); document.getElementById('nav-'+id).classList.add('active'); if(['dashboard','list','approvals','users','learn','templates'].includes(id)) reloadData(); }
@@ -566,7 +596,7 @@
         window.backToGrid=()=>{document.getElementById('learnDetailLevel').classList.add('hidden'); document.getElementById('learnGridLevel').classList.remove('hidden'); document.getElementById('mainVideoPlayer').src="";};
         window.playVideo=(u,t)=>{let v=u; if(u.includes('v='))v=u.split('v=')[1]; document.getElementById('mainVideoPlayer').src=`https://www.youtube.com/embed/${v}?autoplay=1`; document.getElementById('vTitleText').innerText=t; document.getElementById('activeVideoSection').classList.remove('hidden'); };
 
-        // --- BUILDER (SMART COMPILER) ---
+        // --- BUILDER (SMART COMPILER & SERVER HISTORY) ---
         const editor = document.getElementById('htmlEditor');
         const preview = document.getElementById('previewFrame');
         const modeBadge = document.getElementById('modeBadge');
@@ -602,6 +632,114 @@
             updateModeUI(newMode);
             updatePreview(true); 
         }
+
+        // --- HISTORY FUNCTIONALITY (SERVER-SIDE KV) ---
+
+        async function saveHistoryToServer(subdomain, code) {
+            if (!subdomain) return;
+            // Kita hantar ke endpoint /api/history
+            // Pastikan worker anda handle endpoint ini!
+            try {
+                await fetch(`${WORKER_URL}/api/history`, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'save',
+                        subdomain: subdomain,
+                        code: code,
+                        email: currentUser.email,
+                        timestamp: Date.now()
+                    })
+                });
+                console.log("Sejarah disimpan ke server.");
+            } catch (e) {
+                console.error("Gagal simpan sejarah ke server", e);
+            }
+        }
+
+        async function fetchHistoryList(subdomain) {
+            try {
+                const res = await fetch(`${WORKER_URL}/api/history?sub=${subdomain}`);
+                if (!res.ok) throw new Error("API Error");
+                const data = await res.json();
+                // Expecting structure: { history: [{ timestamp: 123, code: "..." }, ...] }
+                return data.history || []; 
+            } catch (e) {
+                console.error("Gagal ambil sejarah", e);
+                return [];
+            }
+        }
+
+        async function toggleHistoryMenu() {
+            const menu = document.getElementById('historyDropdown');
+            const listContainer = document.getElementById('historyList');
+            const sub = document.getElementById('subInput').value;
+
+            if (menu.classList.contains('hidden')) {
+                // Open Menu
+                menu.classList.remove('hidden');
+                
+                if (!sub) {
+                    listContainer.innerHTML = '<div class="p-4 text-center text-xs text-red-400">Sila pilih app (subdomain) dahulu.</div>';
+                    return;
+                }
+                
+                listContainer.innerHTML = '<div class="p-4 text-center text-xs text-slate-400"><i class="fas fa-spinner fa-spin"></i> Memuatkan dari Cloud...</div>';
+                
+                // Fetch from Server
+                const historyData = await fetchHistoryList(sub);
+                
+                // Cache data globally so we can access code by index later
+                currentHistoryCache = historyData;
+
+                renderHistoryList(historyData);
+            } else {
+                // Close Menu
+                menu.classList.add('hidden');
+            }
+        }
+
+        function renderHistoryList(historyArray) {
+            const container = document.getElementById('historyList');
+            if (!historyArray || historyArray.length === 0) {
+                container.innerHTML = '<div class="p-4 text-center text-xs text-slate-400">Tiada sejarah di server.</div>';
+                return;
+            }
+
+            container.innerHTML = historyArray.map((item, index) => {
+                const date = new Date(item.timestamp);
+                const timeStr = date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                const dateStr = date.toLocaleDateString();
+                
+                return `
+                    <div class="p-3 border-b border-slate-100 hover:bg-blue-50 transition group">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="font-bold text-xs text-slate-700">${timeStr}</span>
+                            <span class="text-[10px] text-slate-400">${dateStr}</span>
+                        </div>
+                        <div class="flex gap-2 mt-2">
+                            <button onclick="restoreHistoryByIndex(${index})" class="flex-1 bg-blue-100 text-blue-700 text-[10px] font-bold py-1 rounded hover:bg-blue-200">
+                                <i class="fas fa-undo mr-1"></i> Restore
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function restoreHistoryByIndex(index) {
+            if (!confirm("Adakah anda pasti mahu kembalikan versi ini? Kod semasa dalam editor akan digantikan.")) return;
+            
+            const item = currentHistoryCache[index];
+            if (item && item.code) {
+                editor.value = item.code;
+                updatePreview(false); // Update preview
+                document.getElementById('historyDropdown').classList.add('hidden'); // Close menu
+            } else {
+                alert("Data sejarah rosak atau tidak dijumpai.");
+            }
+        }
+
+        // --- END HISTORY FUNCTIONALITY ---
 
         function getReactWrapper(jsxCode) {
             const lucideMatch = jsxCode.match(/import\s+\{([\s\S]*?)\}\s+from\s+['"]lucide-react['"]/);
